@@ -219,21 +219,41 @@ const SearchView = ({ documents }) => {
 
 **Implement lazy loading:**
 ```javascript
-// frontend/src/App.jsx
+// frontend/src/components/DashboardShell.jsx
 import { Suspense, lazy } from 'react';
 
-const DataExplorer = lazy(() => import('./components/DataExplorer'));
+// Lazy load components for better performance
+const ClusterOverview = lazy(() => import('./ClusterOverview.jsx'))
+const DataExplorer = lazy(() => import('./DataExplorer.jsx'))
+const IngestionPanel = lazy(() => import('./IngestionPanel.jsx'))
+const SearchView = lazy(() => import('./SearchView.jsx'))
 
-function App() {
+export function DashboardShell({ mode, onToggleMode }) {
+  // ...
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <Routes>
-        <Route path="/data" element={<DataExplorer />} />
-      </Routes>
+    <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
+      <Box hidden={tab !== 'overview'}>
+        <ClusterOverview stats={stats} />
+      </Box>
+      <Box hidden={tab !== 'ingest'}>
+        <IngestionPanel socket={socket} onCompleted={loadData} />
+      </Box>
+      <Box hidden={tab !== 'explorer'}>
+        <DataExplorer chunks={chunks} />
+      </Box>
+      <Box hidden={tab !== 'search'}>
+        <SearchView socket={socket} />
+      </Box>
     </Suspense>
-  );
+  )
 }
 ```
+
+**Implementation Status:**
+- ✅ Lazy loading implemented for main content components (ClusterOverview, DataExplorer, IngestionPanel, SearchView)
+- ✅ Suspense wrapper added with loading fallback
+- ✅ Components are now loaded on-demand based on active tab
 
 ## 6. Error Handling
 

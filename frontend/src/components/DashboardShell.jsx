@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, Suspense } from 'react'
 import {
   Box,
   Button,
@@ -22,11 +22,13 @@ import { apiGet } from '../api/client.js'
 import { useSpectraSocket } from '../hooks/useSpectraSocket.js'
 import AuthDialog from './LoginDialog.jsx'
 import { getAuthToken, clearAuth } from '../userSession.js'
-import { ClusterOverview } from './ClusterOverview.jsx'
-import { DataExplorer } from './DataExplorer.jsx'
-import { IngestionPanel } from './IngestionPanel.jsx'
-import { SearchView } from './SearchView.jsx'
 import { RealtimeRail } from './RealtimeRail.jsx'
+
+// Lazy load components for better performance
+const ClusterOverview = React.lazy(() => import('./ClusterOverview.jsx'))
+const DataExplorer = React.lazy(() => import('./DataExplorer.jsx'))
+const IngestionPanel = React.lazy(() => import('./IngestionPanel.jsx'))
+const SearchView = React.lazy(() => import('./SearchView.jsx'))
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -111,18 +113,20 @@ export function DashboardShell({ mode, onToggleMode }) {
               </Tabs>
               <Divider />
 
-              <Box hidden={tab !== 'overview'}>
-                <ClusterOverview stats={stats} />
-              </Box>
-              <Box hidden={tab !== 'ingest'}>
-                <IngestionPanel socket={socket} onCompleted={loadData} />
-              </Box>
-              <Box hidden={tab !== 'explorer'}>
-                <DataExplorer chunks={chunks} />
-              </Box>
-              <Box hidden={tab !== 'search'}>
-                <SearchView socket={socket} />
-              </Box>
+              <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
+                <Box hidden={tab !== 'overview'}>
+                  <ClusterOverview stats={stats} />
+                </Box>
+                <Box hidden={tab !== 'ingest'}>
+                  <IngestionPanel socket={socket} onCompleted={loadData} />
+                </Box>
+                <Box hidden={tab !== 'explorer'}>
+                  <DataExplorer chunks={chunks} />
+                </Box>
+                <Box hidden={tab !== 'search'}>
+                  <SearchView socket={socket} />
+                </Box>
+              </Suspense>
             </Stack>
           </Box>
 
