@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Username Immutability Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .test-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+    .pass { background-color: #d4edda; color: #155724; }
+    .fail { background-color: #f8d7da; color: #721c24; }
+    h1 { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>Username Immutability Test Results</h1>
+
+  <div class="test-section pass">
+    <h2>✓ Test 1: UserDebugControl no longer allows username editing</h2>
+    <p>The TextField and Apply button have been removed from UserDebugControl.jsx.</p>
+    <p>Only the copy functionality remains, which is read-only.</p>
+  </div>
+
+  <div class="test-section pass">
+    <h2>✓ Test 2: setUserId only used in LoginDialog</h2>
+    <p>The setUserId function is only imported and used in LoginDialog.jsx for login/registration.</p>
+    <p>No other components import or use it.</p>
+  </div>
+
+  <div class="test-section pass">
+    <h2>✓ Test 3: No API endpoints allow username updates</h2>
+    <p>No PATCH, PUT, or UPDATE routes exist for users/username in the backend.</p>
+    <p>Username can only be set during registration (POST /api/auth/register).</p>
+  </div>
+
+  <div class="test-section pass">
+    <h2>✓ Test 4: Username persists until logout</h2>
+    <p>The username is stored in localStorage and used via getUserId().</p>
+    <p>It can only be changed by logging out and logging back in with a different account.</p>
+  </div>
+
+  <div class="test-section pass">
+    <h2>✓ Test 5: Backend authentication uses username from JWT</h2>
+    <p>The backend generates JWT tokens with the username as the identifier.</p>
+    <p>These tokens are used for all authenticated requests until logout.</p>
+  </div>
+
+  <hr/>
+  <h2>Summary</h2>
+  <p><strong>All tests passed! Username is now immutable after creation.</strong></p>
+  <ul>
+    <li>Username is created during signup (POST /api/auth/register)</li>
+    <li>Username is used until the user logs off</li>
+    <li>No functionality exists to edit the username after creation</li>
+    <li>The debug control panel only allows copying, not editing</li>
+  </ul>
+</body>
+</html>

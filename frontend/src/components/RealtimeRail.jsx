@@ -1,0 +1,32 @@
+import { Chip, Paper, Stack, Typography } from '@mui/material'
+
+export function RealtimeRail({ status, events }) {
+  return (
+    <Paper sx={{ width: { xs: '100%', lg: 320 }, p: 2, alignSelf: 'flex-start' }}>
+      <Stack spacing={2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Realtime</Typography>
+          <Chip
+            size="small"
+            label={status}
+            color={status === 'connected' ? 'success' : 'default'}
+          />
+        </Stack>
+
+        <Stack spacing={1}>
+          {events.map((event, index) => (
+            <Paper key={`${event.stage || event.status}-${index}`} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">{event.stage || event.status}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {event.message || event.at || `${event.percent || 0}%`}
+              </Typography>
+            </Paper>
+          ))}
+          {events.length === 0 && (
+            <Typography color="text.secondary">No socket events yet</Typography>
+          )}
+        </Stack>
+      </Stack>
+    </Paper>
+  )
+}
