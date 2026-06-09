@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { createSpectraTheme } from './theme.js'
 import { DashboardShell } from './components/DashboardShell.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 export default function App() {
   const [mode, setMode] = useState('dark')
@@ -10,10 +11,12 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <DashboardShell
-        mode={mode}
-        onToggleMode={() => setMode(current => current === 'dark' ? 'light' : 'dark')}
-      />
+      <ErrorBoundary>
+        <DashboardShell
+          mode={mode}
+          onToggleMode={() => setMode(current => current === 'dark' ? 'light' : 'dark')}
+        />
+      </ErrorBoundary>
     </ThemeProvider>
   )
 }
