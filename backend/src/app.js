@@ -2,6 +2,7 @@ import cors from 'cors'
 import express from 'express'
 import { env } from './config/env.js'
 import logger from './utils/logger.js'
+import { pool } from './db/pool.js'
 import { indexRoutes } from './routes/indexRoutes.js'
 import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
@@ -16,8 +17,56 @@ export function createApp() {
   app.use(cors({ origin: env.frontendOrigins }))
   app.use(express.json({ limit: '2mb' }))
 
-  app.get('/health', (request, response) => {
-    response.json({ ok: true, service: 'spectra-backend' })
+  app.get('/health', async (request, response) => {
+    try {
+      const healthChecks = []
+
+      // Check database connection
+      let dbOk = false
+      let dbMessage = ''
+      try {
+        await pool.query('SELECT 1')
+        dbOk = true
+        dbMessage = 'Database connection OK'
+      } catch (error) {
+        dbOk = false
+        dbMessage = `Database error: ${error.message}`
+      }
+      healthChecks.push({ name: 'database', ok: dbOk, message: dbMessage })
+
+      // Check worker process (basic check - file existence)
+      let workerOk = false
+      let workerMessage = ''
+      const fs = await import('fs')
+      try {
+        if (fs.existsSync('./workers/turbovec_worker.py')) {
+          workerOk = true
+          workerMessage = 'Worker script exists'
+        } else {
+          workerOk = false
+          workerMessage = 'Worker script not found'
+        }
+      } catch (error) {
+        workerOk = false
+        workerMessage = `Worker check error: ${error.message}`
+      }
+      healthChecks.push({ name: 'worker', ok: workerOk, message: workerMessage })
+
+      const allOk = healthChecks.every(check => check.ok)
+
+      response.json({
+        ok: allOk,
+        service: 'spectra-backend',
+        checks: healthChecks
+      })
+    } catch (error) {
+      logger.error('Health check failed:', error)
+      response.status(500).json({
+        ok: false,
+        service: 'spectra-backend',
+        error: error.message
+      })
+    }
   })
 
   // Error reporting endpoint for frontend
