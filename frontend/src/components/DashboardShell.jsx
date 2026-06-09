@@ -25,10 +25,21 @@ import { getAuthToken, clearAuth } from '../userSession.js'
 import { RealtimeRail } from './RealtimeRail.jsx'
 
 // Lazy load components for better performance
-const ClusterOverview = React.lazy(() => import('./ClusterOverview.jsx'))
-const DataExplorer = React.lazy(() => import('./DataExplorer.jsx'))
-const IngestionPanel = React.lazy(() => import('./IngestionPanel.jsx'))
-const SearchView = React.lazy(() => import('./SearchView.jsx'))
+let ClusterOverview, DataExplorer, IngestionPanel, SearchView;
+
+if (typeof window !== 'undefined') {
+  const { lazy } = require('react');
+  ClusterOverview = lazy(() => import('./ClusterOverview.jsx'));
+  DataExplorer = lazy(() => import('./DataExplorer.jsx'));
+  IngestionPanel = lazy(() => import('./IngestionPanel.jsx'));
+  SearchView = lazy(() => import('./SearchView.jsx'));
+} else {
+  // Mock components for SSR/Jest
+  ClusterOverview = () => null;
+  DataExplorer = () => null;
+  IngestionPanel = () => null;
+  SearchView = () => null;
+}
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)

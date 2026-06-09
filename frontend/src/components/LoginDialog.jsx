@@ -44,7 +44,8 @@ export function AuthDialog({ open, mode, onClose }) {
     setError(null)
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${endpointMap[mode]}`, {
+      const apiUrl = window.importMetaEnv?.VITE_API_URL || process.env?.VITE_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${apiUrl}${endpointMap[mode]}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password })

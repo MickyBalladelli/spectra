@@ -3,7 +3,8 @@ import { io } from 'socket.io-client'
 import { getUserId } from '../userSession.js'
 
 function getSocketUrl() {
-  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL
+  if (window.importMetaEnv?.VITE_SOCKET_URL) return window.importMetaEnv.VITE_SOCKET_URL
+  if (typeof process !== 'undefined' && process.env?.VITE_SOCKET_URL) return process.env.VITE_SOCKET_URL
   if (typeof window === 'undefined') return 'http://localhost:4000'
 
   return `${window.location.protocol}//${window.location.hostname}:4000`
