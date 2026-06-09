@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, Suspense } from 'react'
+import { useCallback, useEffect, useState, Suspense, lazy } from 'react'
 import {
   Box,
   Button,
@@ -17,29 +17,15 @@ import LightModeIcon from '@mui/icons-material/LightMode'
 import SearchIcon from '@mui/icons-material/Search'
 import StorageIcon from '@mui/icons-material/Storage'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { UserDebugControl } from './UserDebugControl.jsx'
 import { apiGet } from '../api/client.js'
 import { useSpectraSocket } from '../hooks/useSpectraSocket.js'
 import AuthDialog from './LoginDialog.jsx'
 import { getAuthToken, clearAuth } from '../userSession.js'
 import { RealtimeRail } from './RealtimeRail.jsx'
-
-// Lazy load components for better performance
-let ClusterOverview, DataExplorer, IngestionPanel, SearchView;
-
-if (typeof window !== 'undefined') {
-  const { lazy } = require('react');
-  ClusterOverview = lazy(() => import('./ClusterOverview.jsx'));
-  DataExplorer = lazy(() => import('./DataExplorer.jsx'));
-  IngestionPanel = lazy(() => import('./IngestionPanel.jsx'));
-  SearchView = lazy(() => import('./SearchView.jsx'));
-} else {
-  // Mock components for SSR/Jest
-  ClusterOverview = () => null;
-  DataExplorer = () => null;
-  IngestionPanel = () => null;
-  SearchView = () => null;
-}
+import { ClusterOverview } from './ClusterOverview.jsx'
+import { DataExplorer } from './DataExplorer.jsx'
+import { IngestionPanel } from './IngestionPanel.jsx'
+import { SearchView } from './SearchView.jsx'
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -54,7 +40,8 @@ export function DashboardShell({ mode, onToggleMode }) {
       apiGet('/api/indexes/stats'),
       apiGet('/api/indexes/chunks')
     ])
-
+console.log('Loaded stats:', nextStats)
+console.log('Loaded chunks:', nextChunks)
     setStats(nextStats)
     setChunks(nextChunks)
   }, [])
@@ -70,7 +57,6 @@ export function DashboardShell({ mode, onToggleMode }) {
         <Typography variant="h6" sx={{ flex: 1 }}>
           Spectra
         </Typography>
-        <UserDebugControl />
         {getAuthToken() ? (
           <Button onClick={() => { clearAuth(); location.reload() }} variant="outlined">Logout</Button>
         ) : (
@@ -126,7 +112,11 @@ export function DashboardShell({ mode, onToggleMode }) {
 
               <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
                 <Box hidden={tab !== 'overview'}>
-                  <ClusterOverview stats={stats} />
+                  {stats && 
+                    <ClusterOverview 
+                      stats={stats} 
+                    />
+                  }
                 </Box>
                 <Box hidden={tab !== 'ingest'}>
                   <IngestionPanel socket={socket} onCompleted={loadData} />
