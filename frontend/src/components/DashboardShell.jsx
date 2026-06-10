@@ -26,6 +26,7 @@ import { ClusterOverview } from './ClusterOverview.jsx'
 import { DataExplorer } from './DataExplorer.jsx'
 import { IngestionPanel } from './IngestionPanel.jsx'
 import { SearchView } from './SearchView.jsx'
+import { DocumentList } from './DocumentList.jsx'
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -33,17 +34,21 @@ export function DashboardShell({ mode, onToggleMode }) {
   const [tab, setTab] = useState('overview')
   const [stats, setStats] = useState(null)
   const [chunks, setChunks] = useState([])
+  const [documents, setDocuments] = useState([])
   const { socket, status, events } = useSpectraSocket()
 
   const loadData = useCallback(async () => {
-    const [nextStats, nextChunks] = await Promise.all([
+    const [nextStats, nextChunks, nextDocuments] = await Promise.all([
       apiGet('/api/indexes/stats'),
-      apiGet('/api/indexes/chunks')
+      apiGet('/api/indexes/chunks'),
+      apiGet('/api/indexes/documents')
     ])
 console.log('Loaded stats:', nextStats)
 console.log('Loaded chunks:', nextChunks)
+console.log('Loaded documents:', nextDocuments)
     setStats(nextStats)
     setChunks(nextChunks)
+    setDocuments(nextDocuments)
   }, [])
 
   useEffect(() => {
@@ -95,39 +100,43 @@ console.log('Loaded chunks:', nextChunks)
                   </Button>
               </Stack>
 
-              <Tabs
-                value={tab}
-                onChange={(event, value) => setTab(value)}
-                aria-label="Main navigation tabs"
-                variant="scrollable"
-                scrollButtons="auto"
-                allowScrollButtonsMobile
-              >
-                <Tab value="overview" label="Overview" />
-                <Tab value="ingest" label="Ingest" />
-                <Tab value="explorer" label="Explorer" />
-                <Tab value="search" label="Search" />
-              </Tabs>
-              <Divider />
+                <Tabs
+                  value={tab}
+                  onChange={(event, value) => setTab(value)}
+                  aria-label="Main navigation tabs"
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
+                >
+                  <Tab value="overview" label="Overview" />
+                  <Tab value="ingest" label="Ingest" />
+                  <Tab value="documents" label="Documents" />
+                  <Tab value="explorer" label="Explorer" />
+                  <Tab value="search" label="Search" />
+                </Tabs>
+                <Divider />
 
-              <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
-                <Box hidden={tab !== 'overview'}>
-                  {stats && 
-                    <ClusterOverview 
-                      stats={stats} 
-                    />
-                  }
-                </Box>
-                <Box hidden={tab !== 'ingest'}>
-                  <IngestionPanel socket={socket} onCompleted={loadData} />
-                </Box>
-                <Box hidden={tab !== 'explorer'}>
-                  <DataExplorer chunks={chunks} />
-                </Box>
-                <Box hidden={tab !== 'search'}>
-                  <SearchView socket={socket} />
-                </Box>
-              </Suspense>
+                <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
+                  <Box hidden={tab !== 'overview'}>
+                    {stats && 
+                      <ClusterOverview
+                        stats={stats}
+                      />
+                    }
+                  </Box>
+                  <Box hidden={tab !== 'ingest'}>
+                    <IngestionPanel socket={socket} onCompleted={loadData} />
+                  </Box>
+                  <Box hidden={tab !== 'documents'}>
+                    <DocumentList documents={documents} />
+                  </Box>
+                  <Box hidden={tab !== 'explorer'}>
+                    <DataExplorer chunks={chunks} />
+                  </Box>
+                  <Box hidden={tab !== 'search'}>
+                    <SearchView socket={socket} />
+                  </Box>
+                </Suspense>
             </Stack>
           </Box>
 

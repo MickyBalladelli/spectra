@@ -47,7 +47,7 @@ export async function findDocumentByContentHash({ userId, contentHash, body }) {
  * @param {string} params.text - The full text content of the document
  * @param {Object} [params.metadata] - Additional metadata about the document (optional)
  * @returns {Promise<Object>} A promise that resolves to the created document object
-
+ *
  * @property {string} return.id - The generated document ID
  * @property {string} return.userId - The user ID who owns the document
  * @property {string} return.title - The document title
@@ -81,7 +81,7 @@ export async function createDocument({ userId, title, sourceType, text, metadata
  * @param {string} params.documentId - The ID of the parent document
  * @param {Array<Object>} params.chunks - Array of chunk objects to create
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of created chunk objects
-
+ *
  * @property {number} return.id - The generated chunk ID
  * @property {string} return.documentId - The parent document ID
  * @property {number} return.chunkIndex - The index of the chunk within the document
@@ -134,7 +134,7 @@ export async function createChunks({ userId, documentId, chunks }) {
  * @param {Object} params - The parameters object
  * @param {string} params.userId - The ID of the user to get statistics for
  * @returns {Promise<Object>} A promise that resolves to an object containing cluster statistics
-
+ *
  * @property {number} return.documents - Total number of documents
  * @property {number} return.vectors - Total number of vector chunks
  * @property {number} return.compression_factor - Fixed compression factor value (16)
@@ -163,7 +163,7 @@ export async function getClusterStats({ userId }) {
  * @param {string} params.userId - The ID of the user who owns the chunks
  * @param {number} [params.limit=50] - Maximum number of chunks to return (default: 50)
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of chunk objects
-
+ *
  * @property {number} return.id - The chunk ID
  * @property {string} return.documentId - The parent document ID
  * @property {string} return.title - The title of the parent document
@@ -189,6 +189,36 @@ export async function listChunks({ userId, limit = 50 }) {
 }
 
 /**
+ * Lists all documents for a user, ordered by creation date (newest first).
+ *
+ * Retrieves document information including title, source type, and metadata.
+ * Useful for browsing ingested documents.
+ *
+ * @param {Object} params - The parameters object
+ * @param {string} params.userId - The ID of the user who owns the documents
+ * @param {number} [params.limit=50] - Maximum number of documents to return (default: 50)
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of document objects
+ *
+ * @property {string} return.id - The document ID
+ * @property {string} return.title - The document title
+ * @property {string} return.sourceType - The source type of the document (e.g., 'file', 'url')
+ * @property {Date} return.createdAt - The creation timestamp
+ * @property {Object} return.metadata - Additional metadata about the document
+ */
+export async function listDocuments({ userId, limit = 50 }) {
+  const result = await withClient(client => client.query(
+    `select id, title, source_type as "sourceType", created_at as "createdAt", metadata
+     from documents
+     where user_id = $1
+     order by created_at desc
+     limit $2`,
+    [userId, limit]
+  ))
+
+  return result.rows
+}
+
+/**
  * Finds document chunks by their vector keys.
  *
  * Retrieves chunk information for specific vector keys (used in vector search).
@@ -198,7 +228,7 @@ export async function listChunks({ userId, limit = 50 }) {
  * @param {string} params.userId - The ID of the user who owns the chunks
  * @param {Array<string>} params.vectorKeys - Array of vector key strings to find
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of chunk objects
-
+ *
  * @property {number} return.id - The chunk ID
  * @property {string} return.vectorKey - The vector key/identifier for the chunk
  * @property {string} return.content - The text content of the chunk
@@ -230,7 +260,7 @@ export async function findChunksByVectorKeys({ userId, vectorKeys }) {
  * @param {string} params.query - The text query to search for
  * @param {number} [params.limit=5] - Maximum number of chunks to return (default: 5)
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of chunk objects
-
+ *
  * @property {number} return.id - The chunk ID
  * @property {string} return.vectorKey - The vector key/identifier for the chunk
  * @property {string} return.content - The text content of the chunk
@@ -260,7 +290,7 @@ export async function findChunksByText({ userId, query, limit = 5 }) {
  * Stores query text, filters applied, execution time, and result count.
  *
  * @param {Object} params - The parameters object
- * @param {string} params.userId - The ID of the user who executed the query
+ * @param {string} params.userId - The ID of the user who owns the document
  * @param {string} [params.query] - The search query text (optional)
  * @param {Object} [params.filter] - The filter criteria applied to the query (optional)
  * @param {number} params.latencyMs - Query execution time in milliseconds

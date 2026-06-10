@@ -1,5 +1,5 @@
 import express from 'express'
-import { getClusterStats, listChunks } from '../db/documents.js'
+import { getClusterStats, listChunks, listDocuments } from '../db/documents.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 
 export const indexRoutes = express.Router()
@@ -15,6 +15,17 @@ indexRoutes.get('/stats', async (request, response, next) => {
 indexRoutes.get('/chunks', async (request, response, next) => {
   try {
     response.json(await listChunks({
+      userId: getUserIdFromRequest(request),
+      limit: Number(request.query.limit || 50)
+    }))
+  } catch (error) {
+    next(error)
+  }
+})
+
+indexRoutes.get('/documents', async (request, response, next) => {
+  try {
+    response.json(await listDocuments({
       userId: getUserIdFromRequest(request),
       limit: Number(request.query.limit || 50)
     }))
