@@ -8,7 +8,7 @@ import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
 
-export function createApp() {
+export function createApp(getIo = () => null) {
   const app = express()
 
   // Initialize logger
@@ -16,6 +16,10 @@ export function createApp() {
 
   app.use(cors({ origin: env.frontendOrigins }))
   app.use(express.json({ limit: '2mb' }))
+  app.use((request, response, next) => {
+    request.io = getIo()
+    next()
+  })
 
   app.get('/health', async (request, response) => {
     try {

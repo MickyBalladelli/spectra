@@ -5,6 +5,7 @@ import { getUserIdFromSocket } from '../http/userScope.js'
 export function registerSockets(io) {
   io.on('connection', socket => {
     const userId = getUserIdFromSocket(socket)
+    socket.join(`user:${userId}`)
 
     socket.emit('cluster:heartbeat', {
       status: 'connected',
@@ -15,10 +16,10 @@ export function registerSockets(io) {
     socket.on('ingestion:start', async payload => {
       try {
         const result = await ingestDocument({ ...payload, userId }, progress => {
-          socket.emit('ingestion:progress', progress)
+          socket.emit('ingestion:progress', { userId, ...progress })
         })
 
-        socket.emit('ingestion:completed', result)
+        socket.emit('ingestion:completed', { userId, ...result })
       } catch (error) {
         socket.emit('ingestion:error', { message: error.message })
       }

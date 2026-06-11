@@ -77,8 +77,8 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
 
       if (documents.length > 1) {
         onDocumentsChange?.(documents)
-        onTitleChange(`${documents.length} files`)
-        onTextChange(chunks.join('\n\n---\n\n'))
+        onTitleChange(names[0])
+        onTextChange(chunks[0])
         onSourceTypeChange('batch')
       } else {
         onDocumentsChange?.([])

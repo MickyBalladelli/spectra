@@ -15,9 +15,35 @@ import json
 import math
 import os
 import sys
+import tempfile
+from contextlib import contextmanager
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 # Path to the vector store JSON file
-STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "vector_store.json")
+STORE_PATH = os.environ.get(
+    "VECTOR_STORE_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "vector_store.json")
+)
+LOCK_PATH = f"{STORE_PATH}.lock"
+
+
+@contextmanager
+def store_lock():
+    os.makedirs(os.path.dirname(STORE_PATH), exist_ok=True)
+
+    with open(LOCK_PATH, "w", encoding="utf-8") as lock_file:
+        if fcntl:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+        try:
+            yield
+        finally:
+            if fcntl:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def vector_key(seed):
@@ -54,8 +80,11 @@ def load_store():
     if not os.path.exists(STORE_PATH):
         return []
 
-    with open(STORE_PATH, "r", encoding="utf-8") as store_file:
-        return json.load(store_file)
+    try:
+        with open(STORE_PATH, "r", encoding="utf-8") as store_file:
+            return json.load(store_file)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Vector store is corrupt at byte {error.pos}. Rebuild or repair {STORE_PATH}.") from error
 
 
 def save_store(items):
@@ -67,8 +96,18 @@ def save_store(items):
     """
     os.makedirs(os.path.dirname(STORE_PATH), exist_ok=True)
 
-    with open(STORE_PATH, "w", encoding="utf-8") as store_file:
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=os.path.dirname(STORE_PATH),
+        delete=False
+    ) as store_file:
+        temp_path = store_file.name
         json.dump(items, store_file)
+        store_file.flush()
+        os.fsync(store_file.fileno())
+
+    os.replace(temp_path, STORE_PATH)
 
 
 def cosine(left, right):
@@ -133,26 +172,27 @@ def upsert(payload):
 
     This operation removes any existing chunks with matching keys before inserting new ones.
     """
-    chunks = payload.get("chunks", [])
-    store = load_store()
-    next_items = []
-    keys = [
-        vector_key(f"{payload.get('documentId')}:{chunk.get('chunkIndex')}:{chunk.get('content')}")
-        for chunk in chunks
-    ]
+    with store_lock():
+        chunks = payload.get("chunks", [])
+        store = load_store()
+        next_items = []
+        keys = [
+            vector_key(f"{payload.get('documentId')}:{chunk.get('chunkIndex')}:{chunk.get('content')}")
+            for chunk in chunks
+        ]
 
-    stale_keys = set(keys)
-    store = [item for item in store if item.get("vectorKey") not in stale_keys]
+        stale_keys = set(keys)
+        store = [item for item in store if item.get("vectorKey") not in stale_keys]
 
-    for index, chunk in enumerate(chunks):
-        next_items.append({
-            "vectorKey": keys[index],
-            "vector": chunk.get("vector", []),
-            "metadata": chunk.get("metadata", {})
-        })
+        for index, chunk in enumerate(chunks):
+            next_items.append({
+                "vectorKey": keys[index],
+                "vector": chunk.get("vector", []),
+                "metadata": chunk.get("metadata", {})
+            })
 
-    save_store(store + next_items)
-    return {"vectorKeys": keys}
+        save_store(store + next_items)
+        return {"vectorKeys": keys}
 
 
 def search(payload):

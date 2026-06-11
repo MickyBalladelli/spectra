@@ -30,6 +30,8 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
 
   // Skip processing if duplicate found
   if (existingDocument) {
+    emitProgress({ stage: 'duplicate', percent: 100, message: 'Document already indexed' })
+
     return {
       duplicate: true,
       document: existingDocument,
@@ -95,23 +97,28 @@ export async function ingestDocument(payload, emitProgress = () => {}) {
     let allChunks = []
     let allVectorKeys = []
 
-    for (let index = 0; index < payload.documents.length; index += 1) {
+    for (const [index, pendingDocument] of payload.documents.entries()) {
       // Merge batch-level and document-level metadata
       const documentPayload = {
-        ...payload.documents[index],
+        ...pendingDocument,
         userId: payload.userId,
         metadata: {
           ...payload.metadata,
-          ...payload.documents[index].metadata
+          ...pendingDocument.metadata
         }
       }
 
       // Process each document with progress tracking
       const result = await ingestSingleDocument(documentPayload, progress => {
+        const documentPercent = progress.percent || 0
+        const percent = Math.round(((index + (documentPercent / 100)) / payload.documents.length) * 100)
+
         emitProgress({
           documentIndex: index,
           documentsTotal: payload.documents.length,
-          ...progress
+          ...progress,
+          documentPercent,
+          percent
         })
       })
 

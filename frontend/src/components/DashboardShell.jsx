@@ -43,9 +43,6 @@ export function DashboardShell({ mode, onToggleMode }) {
       apiGet('/api/indexes/chunks'),
       apiGet('/api/indexes/documents')
     ])
-console.log('Loaded stats:', nextStats)
-console.log('Loaded chunks:', nextChunks)
-console.log('Loaded documents:', nextDocuments)
     setStats(nextStats)
     setChunks(nextChunks)
     setDocuments(nextDocuments)
@@ -56,14 +53,16 @@ console.log('Loaded documents:', nextDocuments)
   }, [loadData])
 
   useEffect(() => {
-    const handleDocumentDeleted = () => {
+    const refreshData = () => {
       loadData().catch(() => {})
     }
 
-    socket.on('documentDeleted', handleDocumentDeleted)
+    socket.on('documentDeleted', refreshData)
+    socket.on('ingestion:completed', refreshData)
 
     return () => {
-      socket.off('documentDeleted', handleDocumentDeleted)
+      socket.off('documentDeleted', refreshData)
+      socket.off('ingestion:completed', refreshData)
     }
   }, [socket, loadData])
 
@@ -75,13 +74,22 @@ console.log('Loaded documents:', nextDocuments)
           Spectra
         </Typography>
         {getAuthToken() ? (
-          <Button onClick={() => { clearAuth(); location.reload() }} variant="outlined">Logout</Button>
+          <Button onClick={() => {
+            clearAuth()
+            location.reload()
+          }} variant="outlined">Logout</Button>
         ) : (
           <>
-            <Button onClick={() => { setAuthMode('login'); setAuthOpen(true) }} variant="outlined">
+            <Button onClick={() => {
+              setAuthMode('login')
+              setAuthOpen(true)
+            }} variant="outlined">
               Sign in
             </Button>
-            <Button onClick={() => { setAuthMode('register'); setAuthOpen(true) }} variant="contained">
+            <Button onClick={() => {
+              setAuthMode('register')
+              setAuthOpen(true)
+            }} variant="contained">
               Sign up
             </Button>
           </>
@@ -137,7 +145,7 @@ console.log('Loaded documents:', nextDocuments)
                     }
                   </Box>
                   <Box hidden={tab !== 'ingest'}>
-                    <IngestionPanel socket={socket} onCompleted={loadData} />
+                    <IngestionPanel socket={socket} />
                   </Box>
                   <Box hidden={tab !== 'documents'}>
                     <DocumentList documents={documents} onDocumentRemoved={loadData} />

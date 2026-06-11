@@ -48,7 +48,15 @@ export function useSpectraSocket() {
 
     socket.on('cluster:heartbeat', pushEvent)
     socket.on('ingestion:progress', pushEvent)
-    socket.on('ingestion:completed', event => pushEvent({ stage: 'completed', ...event }))
+    socket.on('ingestion:completed', event => pushEvent({
+      stage: 'completed',
+      message: `${event.chunks?.length || 0} chunks indexed`,
+      ...event
+    }))
+    socket.on('ingestion:error', event => pushEvent({
+      status: 'error',
+      message: event?.message || 'Ingestion failed'
+    }))
     socket.on('query:progress', pushEvent)
 
     if (socket.connected) {
@@ -64,6 +72,7 @@ export function useSpectraSocket() {
       socket.off('cluster:heartbeat')
       socket.off('ingestion:progress')
       socket.off('ingestion:completed')
+      socket.off('ingestion:error')
       socket.off('query:progress')
       socket.disconnect()
     }

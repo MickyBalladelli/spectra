@@ -3,7 +3,7 @@ import { Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
-export function IngestionPanel({ socket, onCompleted }) {
+export function IngestionPanel({ socket }) {
   const [title, setTitle] = useState('Demo document')
   const [text, setText] = useState('Spectra indexes dense vectors and keeps document metadata in PostgreSQL.')
   const [documents, setDocuments] = useState([])
@@ -13,8 +13,7 @@ export function IngestionPanel({ socket, onCompleted }) {
 
   useEffect(() => {
     const handleCompleted = result => {
-      setProgress({ percent: 100, message: `${result.chunks.length} chunks indexed` })
-      onCompleted()
+      setProgress({ percent: 100, message: `${result.chunks?.length || 0} chunks indexed` })
     }
 
     const handleError = payload => {
@@ -31,7 +30,7 @@ export function IngestionPanel({ socket, onCompleted }) {
       socket.off('ingestion:completed', handleCompleted)
       socket.off('ingestion:error', handleError)
     }
-  }, [socket, onCompleted])
+  }, [socket])
 
   function startIngestion() {
     setError('')
@@ -45,6 +44,8 @@ export function IngestionPanel({ socket, onCompleted }) {
   }
 
   const ingestActive = progress.percent > 0 && progress.percent < 100
+  const hasQueuedDocuments = documents.length > 0
+  const canStart = hasQueuedDocuments || text.trim() !== ''
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -71,7 +72,7 @@ export function IngestionPanel({ socket, onCompleted }) {
             startIcon={<UploadFileIcon />}
             variant="contained"
             onClick={startIngestion}
-            disabled={ingestActive || !text || text.trim() === ''}
+            disabled={ingestActive || !canStart}
             aria-label="Start document ingestion"
           >
             {ingestActive ? 'Ingesting…' : 'Start ingestion'}

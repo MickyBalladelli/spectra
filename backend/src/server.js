@@ -5,9 +5,10 @@ import { env } from './config/env.js'
 import { pool, withClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
 
-const app = createApp()
+let io
+const app = createApp(() => io)
 const server = http.createServer(app)
-const io = new Server(server, {
+io = new Server(server, {
   cors: {
     origin: env.frontendOrigins,
     methods: ['GET', 'POST']

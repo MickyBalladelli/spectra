@@ -15,4 +15,5 @@ coverage/
 *.zip
 *.tar.gz
 *.tgz
+backend/data/*.corrupt-*
 .vscode/

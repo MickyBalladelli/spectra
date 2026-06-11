@@ -17,9 +17,17 @@ export const ingestionRoutes = express.Router()
 ingestionRoutes.post('/', requireAuth, async (request, response, next) => {
   try {
     const payload = ingestSchema.parse(request.body)
-    const result = await ingestDocument({ ...payload, userId: getUserIdFromRequest(request) })
+    const userId = getUserIdFromRequest(request)
+    const userRoom = `user:${userId}`
+    const result = await ingestDocument({ ...payload, userId }, progress => {
+      request.io?.to(userRoom).emit('ingestion:progress', { userId, ...progress })
+    })
+
+    request.io?.to(userRoom).emit('ingestion:completed', { userId, ...result })
     response.status(result.duplicate ? 200 : 201).json(result)
   } catch (error) {
+    const userId = getUserIdFromRequest(request)
+    request.io?.to(`user:${userId}`).emit('ingestion:error', { userId, message: error.message })
     next(error)
   }
 })
@@ -36,7 +44,8 @@ ingestionRoutes.delete('/:documentId', requireAuth, async (request, response, ne
     }
 
     // Notify other clients that the document was deleted
-    request.io?.emit('documentDeleted', { userId: getUserIdFromRequest(request), documentId: request.params.documentId })
+    const userId = getUserIdFromRequest(request)
+    request.io?.to(`user:${userId}`).emit('documentDeleted', { userId, documentId: request.params.documentId })
 
     return response.json(result)
   } catch (error) {

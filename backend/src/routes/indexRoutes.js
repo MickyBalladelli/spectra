@@ -46,7 +46,7 @@ indexRoutes.delete('/documents/:documentId', async (request, response, next) => 
       return response.status(404).json({ error: result.message })
     }
 
-    request.io?.emit('documentDeleted', { userId, documentId: request.params.documentId })
+    request.io?.to(`user:${userId}`).emit('documentDeleted', { userId, documentId: request.params.documentId })
 
     return response.json(result)
   } catch (error) {
