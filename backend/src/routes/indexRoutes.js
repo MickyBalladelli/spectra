@@ -1,5 +1,5 @@
 import express from 'express'
-import { getClusterStats, listChunks, listDocuments } from '../db/documents.js'
+import { deleteDocument, getClusterStats, listChunks, listDocuments } from '../db/documents.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 
 export const indexRoutes = express.Router()
@@ -29,6 +29,26 @@ indexRoutes.get('/documents', async (request, response, next) => {
       userId: getUserIdFromRequest(request),
       limit: Number(request.query.limit || 50)
     }))
+  } catch (error) {
+    next(error)
+  }
+})
+
+indexRoutes.delete('/documents/:documentId', async (request, response, next) => {
+  try {
+    const userId = getUserIdFromRequest(request)
+    const result = await deleteDocument({
+      userId,
+      documentId: request.params.documentId
+    })
+
+    if (!result.success) {
+      return response.status(404).json({ error: result.message })
+    }
+
+    request.io?.emit('documentDeleted', { userId, documentId: request.params.documentId })
+
+    return response.json(result)
   } catch (error) {
     next(error)
   }

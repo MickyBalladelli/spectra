@@ -1,13 +1,9 @@
-import { useState } from 'react'
 import {
   Box,
   Card,
+  CardActions,
   CardContent,
-  Divider,
-  IconButton,
   List,
-  ListItem,
-  ListItemText,
   Paper,
   Table,
   TableBody,
@@ -21,9 +17,10 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
 import LanguageIcon from '@mui/icons-material/Language'
 import { formatDistanceToNow } from 'date-fns'
+import { DocumentRemoveButton } from './DocumentRemoveButton.jsx'
 
-export function DocumentList({ documents }) {
-  const [viewMode, setViewMode] = useState('list')
+export function DocumentList({ documents, onDocumentRemoved }) {
+  const viewMode = 'list'
 
   if (!documents || documents.length === 0) {
     return (
@@ -66,6 +63,12 @@ export function DocumentList({ documents }) {
                     Ingested {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
                   </Typography>
                 </CardContent>
+                <CardActions sx={{ justifyContent: 'flex-end', p: 1 }}>
+                  <DocumentRemoveButton
+                    documentId={doc.id}
+                    onRemoved={onDocumentRemoved}
+                  />
+                </CardActions>
               </Card>
             )
           })}
@@ -78,6 +81,7 @@ export function DocumentList({ documents }) {
                 <TableCell>Title</TableCell>
                 <TableCell>Source Type</TableCell>
                 <TableCell>Ingested</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -89,6 +93,13 @@ export function DocumentList({ documents }) {
                   <TableCell>{doc.sourceType}</TableCell>
                   <TableCell>
                     {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell align="right">
+                    <DocumentRemoveButton
+                      documentId={doc.id}
+                      iconOnly
+                      onRemoved={onDocumentRemoved}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

@@ -71,6 +71,39 @@ export async function createDocument({ userId, title, sourceType, text, metadata
 }
 
 /**
+ * Deletes a document and its associated chunks from the database.
+ *
+ * Removes the document with the specified ID if it belongs to the given user.
+ * Uses CASCADE delete on document_chunks table to automatically remove related chunks.
+ *
+ * @param {Object} params - The parameters object
+ * @param {string} params.userId - The ID of the user who owns the document
+ * @param {string} params.documentId - The ID of the document to delete
+ * @returns {Promise<Object>} A promise that resolves to an object indicating success or failure
+ *
+ * @property {boolean} return.success - Whether the deletion was successful
+ * @property {string} [return.message] - Error message if deletion failed
+ */
+export async function deleteDocument({ userId, documentId }) {
+  try {
+    const result = await withClient(client => client.query(
+      `delete from documents
+       where id = $1 and user_id = $2
+       returning id`,
+      [documentId, userId]
+    ))
+
+    if (result.rows.length === 0) {
+      return { success: false, message: 'Document not found or does not belong to user' }
+    }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+}
+
+/**
  * Creates multiple document chunks in the database.
  *
  * Takes an array of chunk objects and inserts them into the document_chunks table

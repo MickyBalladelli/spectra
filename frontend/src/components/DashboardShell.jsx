@@ -55,6 +55,18 @@ console.log('Loaded documents:', nextDocuments)
     loadData().catch(() => {})
   }, [loadData])
 
+  useEffect(() => {
+    const handleDocumentDeleted = () => {
+      loadData().catch(() => {})
+    }
+
+    socket.on('documentDeleted', handleDocumentDeleted)
+
+    return () => {
+      socket.off('documentDeleted', handleDocumentDeleted)
+    }
+  }, [socket, loadData])
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Toolbar sx={{ borderBottom: 1, borderColor: 'divider', gap: 2 }}>
@@ -128,7 +140,7 @@ console.log('Loaded documents:', nextDocuments)
                     <IngestionPanel socket={socket} onCompleted={loadData} />
                   </Box>
                   <Box hidden={tab !== 'documents'}>
-                    <DocumentList documents={documents} />
+                    <DocumentList documents={documents} onDocumentRemoved={loadData} />
                   </Box>
                   <Box hidden={tab !== 'explorer'}>
                     <DataExplorer chunks={chunks} />

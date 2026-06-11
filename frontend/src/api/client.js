@@ -5,7 +5,7 @@ import { getAuthToken } from '../userSession.js'
 const apiUrl =
   typeof process !== 'undefined' && process.env?.VITE_API_URL
     ? process.env.VITE_API_URL
-    : (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) || 'http://localhost:4000';
+    : (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) || 'http://localhost:4000'
 
 export async function apiGet(path) {
   const response = await fetch(`${apiUrl}${path}`, {
@@ -35,6 +35,23 @@ export async function apiPost(path, body) {
 
   if (!response.ok) {
     throw new Error(`POST ${path} failed`)
+  }
+
+  return response.json()
+}
+
+export async function apiDelete(path) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: 'DELETE',
+    headers: {
+      'X-Spectra-User': getUserId(),
+      ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
+    }
+  })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || `DELETE ${path} failed`)
   }
 
   return response.json()
