@@ -4,9 +4,17 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
+function getJobDetail(job) {
+  if (job.status === 'failed') {
+    return job.error || job.message || 'Ingestion failed'
+  }
+
+  return job.message || job.stage || job.status
+}
+
 export function IngestionPanel({ socket, canIngest, onCompleted }) {
-  const [title, setTitle] = useState('Demo document')
-  const [text, setText] = useState('Spectra indexes dense vectors and keeps document metadata in PostgreSQL.')
+  const [title, setTitle] = useState('')
+  const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [sourceType, setSourceType] = useState('raw')
   const [progress, setProgress] = useState({ percent: 0, message: 'Idle' })
@@ -153,8 +161,12 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                   <Typography variant="body2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {job.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {job.message || job.stage || job.status}
+                  <Typography
+                    variant="caption"
+                    color={job.status === 'failed' ? 'error.main' : 'text.secondary'}
+                    sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {getJobDetail(job)}
                   </Typography>
                 </Box>
                 <Chip size="small" label={job.status} color={job.status === 'completed' ? 'success' : job.status === 'failed' ? 'error' : 'default'} />

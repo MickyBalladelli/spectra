@@ -51,7 +51,7 @@ export function DocumentInputZone({ title, text, files = [], onTitleChange, onTe
     onTextChange(pastedText)
     onSourceTypeChange('paste')
 
-    if (!title || title === 'Demo document') {
+    if (!title) {
       onTitleChange('Pasted document')
     }
   }

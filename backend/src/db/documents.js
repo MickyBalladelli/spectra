@@ -150,11 +150,12 @@ export async function createChunks({ userId, documentId, chunks }) {
     const result = await client.query(
       `insert into document_chunks
         (user_id, document_id, chunk_index, vector_key, embedding, content, token_count, metadata)
-       select incoming.user_id, incoming.document_id, incoming.chunk_index, incoming.vector_key,
-         incoming.embedding, incoming.content, incoming.token_count, incoming.metadata
+       select incoming.user_id::text, incoming.document_id::uuid, incoming.chunk_index::integer,
+         incoming.vector_key::text, incoming.embedding, incoming.content::text,
+         incoming.token_count::integer, incoming.metadata::jsonb
        from (values ${placeholders}) as incoming
          (user_id, document_id, chunk_index, vector_key, embedding, content, token_count, metadata)
-       join documents d on d.id = incoming.document_id and d.user_id = incoming.user_id
+       join documents d on d.id = incoming.document_id::uuid and d.user_id = incoming.user_id
        returning id, document_id as "documentId", chunk_index as "chunkIndex",
          vector_key as "vectorKey", content, token_count as "tokenCount", metadata`,
       values
