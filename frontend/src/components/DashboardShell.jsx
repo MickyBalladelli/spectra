@@ -163,7 +163,7 @@ export function DashboardShell({ mode, onToggleMode }) {
               <SearchView socket={socket} />
             </Box>
             <Box hidden={tab !== 'console'}>
-              <ConsolePanel status={status} events={events} />
+              <ConsolePanel events={events} />
             </Box>
           </Suspense>
         </Stack>

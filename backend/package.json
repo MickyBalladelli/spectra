@@ -5,9 +5,15 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon --watch src --watch workers src/server.js",
     "db:setup": "node scripts/setupDatabase.js",
     "start": "node src/server.js"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "data/*",
+      "logs/*"
+    ]
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

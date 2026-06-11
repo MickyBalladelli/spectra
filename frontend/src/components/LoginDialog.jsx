@@ -17,13 +17,24 @@ const endpointMap = {
   register: '/api/auth/register'
 }
 
-function getApiUrl() {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) return import.meta.env.VITE_API_URL
-  if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) return window.importMetaEnv.VITE_API_URL
-  if (typeof process !== 'undefined' && process.env?.VITE_API_URL) return process.env.VITE_API_URL
-  if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:4000`
+function isLocalApiUrl(value) {
+  try {
+    const { hostname } = new URL(value)
+    return hostname === 'localhost' || hostname === '127.0.0.1'
+  } catch {
+    return false
+  }
+}
 
-  return 'http://localhost:4000'
+function getApiUrl() {
+  const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_URL : null
+  const windowUrl = typeof window !== 'undefined' ? window.importMetaEnv?.VITE_API_URL : null
+  const processUrl = typeof process !== 'undefined' ? process.env?.VITE_API_URL : null
+  const configuredUrl = envUrl || windowUrl || processUrl
+
+  if (configuredUrl && !isLocalApiUrl(configuredUrl)) return configuredUrl
+
+  return ''
 }
 
 export function AuthDialog({ open, mode, onClose }) {

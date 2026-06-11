@@ -23,10 +23,13 @@ try:
 except ImportError:
     fcntl = None
 
+DEFAULT_STORE_PATH = os.path.join(tempfile.gettempdir(), "spectra", "vector_store.json")
+LEGACY_STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "vector_store.json")
+
 # Path to the vector store JSON file
 STORE_PATH = os.environ.get(
     "VECTOR_STORE_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "data", "vector_store.json")
+    DEFAULT_STORE_PATH
 )
 LOCK_PATH = f"{STORE_PATH}.lock"
 
@@ -77,14 +80,18 @@ def load_store():
         ...
     ]
     """
-    if not os.path.exists(STORE_PATH):
+    source_path = STORE_PATH
+    if not os.path.exists(source_path) and source_path == DEFAULT_STORE_PATH and os.path.exists(LEGACY_STORE_PATH):
+        source_path = LEGACY_STORE_PATH
+
+    if not os.path.exists(source_path):
         return []
 
     try:
-        with open(STORE_PATH, "r", encoding="utf-8") as store_file:
+        with open(source_path, "r", encoding="utf-8") as store_file:
             return json.load(store_file)
     except json.JSONDecodeError as error:
-        raise ValueError(f"Vector store is corrupt at byte {error.pos}. Rebuild or repair {STORE_PATH}.") from error
+        raise ValueError(f"Vector store is corrupt at byte {error.pos}. Rebuild or repair {source_path}.") from error
 
 
 def save_store(items):

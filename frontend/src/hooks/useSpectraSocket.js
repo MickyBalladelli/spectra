@@ -3,12 +3,19 @@ import { io } from 'socket.io-client'
 import { getUserId } from '../userSession.js'
 
 function getSocketUrl() {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL
-  if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_SOCKET_URL) return window.importMetaEnv.VITE_SOCKET_URL
-  if (typeof process !== 'undefined' && process.env?.VITE_SOCKET_URL) return process.env.VITE_SOCKET_URL
-  if (typeof window === 'undefined') return 'http://localhost:4000'
+  const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SOCKET_URL : null
+  const windowUrl = typeof window !== 'undefined' ? window.importMetaEnv?.VITE_SOCKET_URL : null
+  const processUrl = typeof process !== 'undefined' ? process.env?.VITE_SOCKET_URL : null
+  const configuredUrl = envUrl || windowUrl || processUrl
 
-  return `${window.location.protocol}//${window.location.hostname}:4000`
+  if (configuredUrl) {
+    try {
+      const { hostname } = new URL(configuredUrl)
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1') return configuredUrl
+    } catch {}
+  }
+
+  return undefined
 }
 
 export function useSpectraSocket() {
@@ -28,7 +35,10 @@ export function useSpectraSocket() {
 
   useEffect(() => {
     const pushEvent = event => {
-      setEvents(current => [event, ...current].slice(0, 8))
+      setEvents(current => [{
+        at: new Date().toISOString(),
+        ...event
+      }, ...current].slice(0, 8))
     }
 
     socket.on('connect', () => {
