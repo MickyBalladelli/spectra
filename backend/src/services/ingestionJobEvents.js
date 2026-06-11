@@ -1,10 +1,21 @@
 import { ingestionJobChannel } from '../db/ingestionJobs.js'
 import { pool } from '../db/pool.js'
+import { recordJobLog } from './observabilityService.js'
 
 function emitJobEvent(io, event, job) {
   if (!job?.userId) return
 
   const userRoom = `user:${job.userId}`
+  recordJobLog({
+    userId: job.userId,
+    jobId: job.id,
+    title: job.title,
+    event,
+    status: job.status,
+    stage: job.stage,
+    percent: job.percent,
+    message: job.error || job.message || event
+  })
   io.to(userRoom).emit('ingestion:job', job)
 
   if (event === 'running') {

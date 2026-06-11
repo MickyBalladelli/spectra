@@ -1,4 +1,7 @@
 import { Box, Paper, Stack, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { apiGet } from '../api/client.js'
+import { ObservabilityPanel } from './ObservabilityPanel.jsx'
 
 function getEventTitle(event) {
   return event.stage || event.status || 'event'
@@ -20,10 +23,20 @@ function formatEventDate(value) {
 }
 
 export function ConsolePanel({ events }) {
+  const [observability, setObservability] = useState(null)
+
+  useEffect(() => {
+    apiGet('/api/observability')
+      .then(setObservability)
+      .catch(() => {})
+  }, [events])
+
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Stack spacing={2}>
         <Typography variant="h6">Console</Typography>
+
+        <ObservabilityPanel data={observability} />
 
         <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
           {events.map((event, index) => (

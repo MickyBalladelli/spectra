@@ -59,6 +59,18 @@ async function ensureDatabaseSchema() {
       await client.query(`alter table document_chunks add column if not exists embedding vector(128)`)
       await client.query(`create index if not exists document_chunks_embedding_idx on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100)`)
       await client.query(`
+        create table if not exists query_audit_logs (
+          id bigserial primary key,
+          user_id text not null,
+          query_text text,
+          filter jsonb default '{}',
+          latency_ms integer not null,
+          result_count integer not null,
+          created_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`create index if not exists query_audit_logs_user_created_idx on query_audit_logs(user_id, created_at desc)`)
+      await client.query(`
         create table if not exists ingestion_jobs (
           id uuid primary key,
           user_id text not null,

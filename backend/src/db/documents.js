@@ -443,3 +443,17 @@ export async function writeQueryAudit({ userId, query, filter, latencyMs, result
     [userId, query, filter, latencyMs, resultCount]
   ))
 }
+
+export async function listQueryLatency({ userId, limit = 50 }) {
+  const result = await withClient(client => client.query(
+    `select id, query_text as "queryText", latency_ms as "latencyMs",
+      result_count as "resultCount", created_at as "createdAt"
+     from query_audit_logs
+     where user_id = $1
+     order by created_at desc
+     limit $2`,
+    [userId, limit]
+  ))
+
+  return result.rows
+}

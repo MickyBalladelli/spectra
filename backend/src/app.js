@@ -8,6 +8,8 @@ import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
 import { collectionRoutes } from './routes/collectionRoutes.js'
+import { observabilityRoutes } from './routes/observabilityRoutes.js'
+import { recordErrorLog, recordRequestLog } from './services/observabilityService.js'
 
 export function createApp(getIo = () => null) {
   const app = express()
@@ -23,6 +25,23 @@ export function createApp(getIo = () => null) {
   app.use(express.json({ limit: '10mb' }))
   app.use((request, response, next) => {
     request.io = getIo()
+    next()
+  })
+  app.use((request, response, next) => {
+    const startedAt = Date.now()
+
+    response.on('finish', () => {
+      if (request.path === '/health') return
+
+      recordRequestLog({
+        method: request.method,
+        path: request.originalUrl,
+        status: response.statusCode,
+        latencyMs: Date.now() - startedAt,
+        userId: request.user?.id || null
+      })
+    })
+
     next()
   })
 
@@ -85,6 +104,12 @@ export function createApp(getIo = () => null) {
       userAgent: request.headers['user-agent'],
       timestamp: new Date().toISOString(),
     })
+    recordErrorLog({
+      source: 'frontend',
+      message: error,
+      detail: stack || componentStack,
+      userId: request.user?.id || null
+    })
     response.status(200).json({ success: true })
   })
 
@@ -93,6 +118,7 @@ export function createApp(getIo = () => null) {
   app.use('/api/ingestions', ingestionRoutes)
   app.use('/api/query', queryRoutes)
   app.use('/api/collections', collectionRoutes)
+  app.use('/api/observability', observabilityRoutes)
 
   // Centralized error handling middleware
   app.use((error, request, response, next) => {
@@ -105,6 +131,15 @@ export function createApp(getIo = () => null) {
       errorName: error.name,
       errorMessage: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    })
+    recordErrorLog({
+      source: 'backend',
+      message: error.message,
+      detail: error.stack,
+      method: request.method,
+      path: request.originalUrl,
+      status,
+      userId: request.user?.id || null
     })
 
     response.status(status).json({
