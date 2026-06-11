@@ -274,8 +274,18 @@ export async function getDocument({ userId, documentId }) {
   return result.rows[0] || null
 }
 
-export async function findChunksByVector({ userId, vector, filter = {}, collectionId = null, limit = 5 }) {
-  const values = [userId, toVectorLiteral(vector), filter, collectionId, limit]
+export async function findChunksByVector({ userId, vector, filter = {}, collectionId = null, searchFilters = {}, limit = 5 }) {
+  const values = [
+    userId,
+    toVectorLiteral(vector),
+    filter,
+    collectionId,
+    limit,
+    searchFilters.sourceType || null,
+    searchFilters.documentId || null,
+    searchFilters.dateFrom || null,
+    searchFilters.dateTo || null
+  ]
   const result = await withClient(client => client.query(
     `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title,
        round((1 - (dc.embedding <=> $2::vector))::numeric, 4)::float as score
@@ -303,6 +313,10 @@ export async function findChunksByVector({ userId, vector, filter = {}, collecti
        )
        and dc.embedding is not null
        and dc.metadata @> $3::jsonb
+       and ($6::text is null or d.source_type = $6)
+       and ($7::uuid is null or d.id = $7::uuid)
+       and ($8::timestamptz is null or d.created_at >= $8::timestamptz)
+       and ($9::timestamptz is null or d.created_at <= $9::timestamptz)
      order by dc.embedding <=> $2::vector
      limit $5`,
     values
@@ -329,7 +343,7 @@ export async function findChunksByVector({ userId, vector, filter = {}, collecti
  * @property {Object} return.metadata - Additional metadata about the chunk
  * @property {string} return.title - The title of the parent document
  */
-export async function findChunksByText({ userId, query, collectionId = null, limit = 5 }) {
+export async function findChunksByText({ userId, query, collectionId = null, searchFilters = {}, limit = 5 }) {
   if (!query || !query.trim()) return []
   const terms = query
     .toLowerCase()
@@ -373,9 +387,22 @@ export async function findChunksByText({ userId, query, collectionId = null, lim
          from unnest($2::text[]) term
          where lower(dc.content) like '%' || term || '%'
        )
+       and ($5::text is null or d.source_type = $5)
+       and ($6::uuid is null or d.id = $6::uuid)
+       and ($7::timestamptz is null or d.created_at >= $7::timestamptz)
+       and ($8::timestamptz is null or d.created_at <= $8::timestamptz)
      order by "keywordHits" desc, dc.created_at desc
      limit $4`,
-    [userId, terms, collectionId, limit]
+    [
+      userId,
+      terms,
+      collectionId,
+      limit,
+      searchFilters.sourceType || null,
+      searchFilters.documentId || null,
+      searchFilters.dateFrom || null,
+      searchFilters.dateTo || null
+    ]
   ))
 
   return result.rows

@@ -24,40 +24,58 @@ function createSnippet(content, query) {
 
   const terms = getQueryTerms(query)
   const lowerText = text.toLowerCase()
-  const firstHit = terms
-    .map(term => lowerText.indexOf(term))
-    .filter(index => index >= 0)
-    .sort((left, right) => left - right)[0]
+  const hits = terms
+    .flatMap(term => {
+      const indexes = []
+      let index = lowerText.indexOf(term)
+      while (index >= 0) {
+        indexes.push(index)
+        index = lowerText.indexOf(term, index + term.length)
+      }
+      return indexes
+    })
+    .sort((left, right) => left - right)
 
-  if (firstHit === undefined) return `${text.slice(0, 340)}...`
+  if (hits.length === 0) return `${text.slice(0, 340)}...`
 
-  const start = Math.max(0, firstHit - 140)
-  const end = Math.min(text.length, firstHit + 220)
+  const bestHit = hits
+    .map(index => ({
+      index,
+      count: hits.filter(hit => hit >= index - 140 && hit <= index + 220).length
+    }))
+    .sort((left, right) => (right.count - left.count) || (left.index - right.index))[0].index
+
+  const start = Math.max(0, bestHit - 140)
+  const end = Math.min(text.length, bestHit + 220)
   const prefix = start > 0 ? '...' : ''
   const suffix = end < text.length ? '...' : ''
 
   return `${prefix}${text.slice(start, end)}${suffix}`
 }
 
-function formatResult(row, query, score) {
+function formatResult(row, query, scores) {
   if (!row) return null
 
   const terms = getQueryTerms(query)
   const keywordHits = terms
     .filter(term => String(row.content || '').toLowerCase().includes(term))
     .length
-  const adjustedScore = Math.max(score, terms.length ? keywordHits / terms.length : score)
+  const textScore = scores.textScore ?? (terms.length ? keywordHits / terms.length : 0)
+  const vectorScore = scores.vectorScore ?? 0
+  const combinedScore = (textScore * 0.6) + (vectorScore * 0.4)
 
   return {
     ...row,
     content: createSnippet(row.content, query),
     keywordHits,
-    confidence: adjustedScore >= 0.55 ? 'high' : adjustedScore >= env.searchMinScore ? 'medium' : 'low',
-    score: Number(adjustedScore.toFixed(4))
+    textScore: Number(textScore.toFixed(4)),
+    vectorScore: Number(vectorScore.toFixed(4)),
+    confidence: combinedScore >= 0.55 ? 'high' : combinedScore >= env.searchMinScore ? 'medium' : 'low',
+    score: Number(combinedScore.toFixed(4))
   }
 }
 
-export async function executeQuery({ userId, query, filter = {}, topK = 5, collectionId = null }) {
+export async function executeQuery({ userId, query, filter = {}, searchFilters = {}, topK = 5, collectionId = null }) {
   const startedAt = Date.now()
   const normalizedQuery = normalizeQuery(query) || query
   const vector = embedText(normalizedQuery)
@@ -68,36 +86,51 @@ export async function executeQuery({ userId, query, filter = {}, topK = 5, colle
     throw error
   }
 
-  const exactRows = await findChunksByText({ userId, query: normalizedQuery, collectionId, limit: topK })
-  const exactKeys = new Set(exactRows.map(row => String(row.vectorKey)))
+  const poolLimit = Math.max(topK * 4, 20)
+  const exactRows = await findChunksByText({ userId, query: normalizedQuery, collectionId, searchFilters, limit: poolLimit })
 
   const queryTermCount = getQueryTerms(normalizedQuery).length || 1
-  const exactResults = exactRows
-    .map(row => formatResult(row, normalizedQuery, (row.keywordHits || 0) / queryTermCount))
-    .filter(result => result.score >= env.searchMinScore)
   const vectorRows = await findChunksByVector({
     userId,
     vector,
     collectionId,
-    filter: {
-      ...filter,
-      userId
-    },
-    limit: topK
+    searchFilters,
+    filter,
+    limit: poolLimit
   })
 
-  const vectorResults = vectorRows
-    .map(row => formatResult(row, normalizedQuery, row.score))
-    .filter(result => result?.id && result.score >= env.searchMinScore && !exactKeys.has(String(result.vectorKey)))
-    .sort((left, right) => (right.keywordHits - left.keywordHits) || (right.score - left.score))
+  const byKey = new Map()
+  for (const row of exactRows) {
+    byKey.set(String(row.vectorKey), {
+      row,
+      textScore: (row.keywordHits || 0) / queryTermCount,
+      vectorScore: 0
+    })
+  }
 
-  const results = exactResults.concat(vectorResults).slice(0, topK)
+  for (const row of vectorRows) {
+    const key = String(row.vectorKey)
+    const current = byKey.get(key) || { row, textScore: 0, vectorScore: 0 }
+    current.row = { ...current.row, ...row }
+    current.vectorScore = row.score || 0
+    byKey.set(key, current)
+  }
+
+  const results = Array.from(byKey.values())
+    .map(match => formatResult(match.row, normalizedQuery, {
+      textScore: match.textScore,
+      vectorScore: match.vectorScore
+    }))
+    .filter(result => result?.id && result.score >= env.searchMinScore)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, topK)
   const latencyMs = Date.now() - startedAt
 
   await writeQueryAudit({
     userId,
     query,
     filter,
+    searchFilters,
     latencyMs,
     resultCount: results.length
   })

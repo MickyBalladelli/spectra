@@ -7,6 +7,12 @@ import { requireAuth } from '../http/auth.js'
 const querySchema = z.object({
   query: z.string().min(1),
   filter: z.record(z.unknown()).optional(),
+  searchFilters: z.object({
+    sourceType: z.string().optional(),
+    documentId: z.string().uuid().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional()
+  }).optional(),
   collectionId: z.string().uuid().nullable().optional(),
   topK: z.number().int().min(1).max(25).optional()
 })

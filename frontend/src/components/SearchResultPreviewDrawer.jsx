@@ -15,7 +15,9 @@ export function SearchResultPreviewDrawer({ result, query, open, onClose }) {
             </Box>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Chip size="small" label={result.confidence || 'low'} color={result.confidence === 'high' ? 'success' : result.confidence === 'medium' ? 'primary' : 'warning'} variant="outlined" />
-              <Chip size="small" label={result.score} />
+              <Chip size="small" label={`combined ${result.score}`} />
+              <Chip size="small" label={`keyword ${result.textScore ?? 0}`} variant="outlined" />
+              <Chip size="small" label={`vector ${result.vectorScore ?? 0}`} variant="outlined" />
               {result.metadata?.sourceType && <Chip size="small" label={result.metadata.sourceType} variant="outlined" />}
             </Stack>
             <Divider />

@@ -234,7 +234,7 @@ export function DashboardShell({ mode, onToggleMode }) {
               <DataExplorer chunks={chunks} />
             </Box>
             <Box hidden={tab !== 'search'}>
-              <SearchView socket={socket} collections={collections} />
+              <SearchView socket={socket} collections={collections} documents={documents} />
             </Box>
             <Box hidden={tab !== 'console'}>
               <ConsolePanel events={events} />

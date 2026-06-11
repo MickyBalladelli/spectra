@@ -15,10 +15,6 @@ Better search ranking
   Snippet generation around best match
   Sort by combined score
   Add filters by source, document, date
-Collections
-  Group documents into collections
-  Search within collection
-  Share collection with another user
 Observability
   Request logs
   Job logs

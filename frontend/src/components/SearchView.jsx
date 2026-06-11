@@ -27,7 +27,7 @@ function getConfidenceColor(confidence) {
   return 'warning'
 }
 
-export function SearchView({ socket, collections = [] }) {
+export function SearchView({ socket, collections = [], documents = [] }) {
   const [query, setQuery] = useState('Find vector compression notes')
   const [useFilter, setUseFilter] = useState(false)
   const [filter, setFilter] = useState('{\n  "sourceType": "pdf"\n}')
@@ -36,6 +36,10 @@ export function SearchView({ socket, collections = [] }) {
   const [results, setResults] = useState([])
   const [normalizedQuery, setNormalizedQuery] = useState('')
   const [collectionId, setCollectionId] = useState('')
+  const [sourceType, setSourceType] = useState('')
+  const [documentId, setDocumentId] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [previewResult, setPreviewResult] = useState(null)
@@ -108,10 +112,18 @@ export function SearchView({ socket, collections = [] }) {
     socket.emit('query:execute', {
       query,
       collectionId: collectionId || null,
+      searchFilters: {
+        ...(sourceType ? { sourceType } : {}),
+        ...(documentId ? { documentId } : {}),
+        ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
+        ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {})
+      },
       filter: parsedFilter,
       topK: 5
     })
   }
+
+  const sourceTypes = Array.from(new Set(documents.map(document => document.sourceType).filter(Boolean))).sort()
 
   return (
     <Grid container spacing={2}>
@@ -149,6 +161,46 @@ export function SearchView({ socket, collections = [] }) {
                 ))}
               </Select>
             </FormControl>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>Source</InputLabel>
+                <Select label="Source" value={sourceType} onChange={event => setSourceType(event.target.value)}>
+                  <MenuItem value="">Any source</MenuItem>
+                  {sourceTypes.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>Document</InputLabel>
+                <Select label="Document" value={documentId} onChange={event => setDocumentId(event.target.value)}>
+                  <MenuItem value="">Any document</MenuItem>
+                  {documents.map(document => (
+                    <MenuItem key={document.id} value={document.id}>{document.title}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+              <TextField
+                size="small"
+                label="From"
+                type="date"
+                value={dateFrom}
+                onChange={event => setDateFrom(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                label="To"
+                type="date"
+                value={dateTo}
+                onChange={event => setDateTo(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
             <FormControlLabel
               control={<Switch checked={useFilter} onChange={event => setUseFilter(event.target.checked)} />}
               label="Use metadata filter"
@@ -231,6 +283,8 @@ export function SearchView({ socket, collections = [] }) {
                     <Stack direction="row" spacing={1}>
                       <Chip size="small" color={getConfidenceColor(result.confidence)} variant="outlined" label={result.confidence || 'low'} />
                       <Chip size="small" color="success" variant="outlined" label={result.score} />
+                      <Chip size="small" variant="outlined" label={`kw ${result.textScore ?? 0}`} />
+                      <Chip size="small" variant="outlined" label={`vec ${result.vectorScore ?? 0}`} />
                     </Stack>
                   </Stack>
                   <Typography color="text.secondary">
