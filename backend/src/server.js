@@ -87,6 +87,42 @@ async function ensureDatabaseSchema() {
       await client.query(`create index if not exists ingestion_jobs_user_id_idx on ingestion_jobs(user_id)`)
       await client.query(`create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status)`)
       await client.query(`create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc)`)
+      await client.query(`
+        create table if not exists users (
+          username text primary key,
+          password_hash text not null,
+          created_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`create unique index if not exists users_username_idx on users(username)`)
+      await client.query(`
+        create table if not exists collections (
+          id uuid primary key,
+          owner_user_id text not null references users(username) on delete cascade,
+          name text not null,
+          created_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`
+        create table if not exists collection_documents (
+          collection_id uuid not null references collections(id) on delete cascade,
+          document_id uuid not null references documents(id) on delete cascade,
+          added_by text not null,
+          added_at timestamptz not null default now(),
+          primary key (collection_id, document_id)
+        )
+      `)
+      await client.query(`
+        create table if not exists collection_shares (
+          collection_id uuid not null references collections(id) on delete cascade,
+          user_id text not null references users(username) on delete cascade,
+          created_at timestamptz not null default now(),
+          primary key (collection_id, user_id)
+        )
+      `)
+      await client.query(`create index if not exists collections_owner_user_id_idx on collections(owner_user_id)`)
+      await client.query(`create index if not exists collection_documents_document_id_idx on collection_documents(document_id)`)
+      await client.query(`create index if not exists collection_shares_user_id_idx on collection_shares(user_id)`)
     })
   } catch (error) {
     console.warn('Skipping database schema migration:', error.message)

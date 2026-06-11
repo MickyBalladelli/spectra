@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
+import { Box, Button, Chip, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Select, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { HighlightedText } from './HighlightedText.jsx'
 import { getAuthToken } from '../userSession.js'
@@ -27,7 +27,7 @@ function getConfidenceColor(confidence) {
   return 'warning'
 }
 
-export function SearchView({ socket }) {
+export function SearchView({ socket, collections = [] }) {
   const [query, setQuery] = useState('Find vector compression notes')
   const [useFilter, setUseFilter] = useState(false)
   const [filter, setFilter] = useState('{\n  "sourceType": "pdf"\n}')
@@ -35,6 +35,7 @@ export function SearchView({ socket }) {
   const [latency, setLatency] = useState(null)
   const [results, setResults] = useState([])
   const [normalizedQuery, setNormalizedQuery] = useState('')
+  const [collectionId, setCollectionId] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [previewResult, setPreviewResult] = useState(null)
@@ -106,6 +107,7 @@ export function SearchView({ socket }) {
 
     socket.emit('query:execute', {
       query,
+      collectionId: collectionId || null,
       filter: parsedFilter,
       topK: 5
     })
@@ -136,6 +138,17 @@ export function SearchView({ socket }) {
               inputProps={{ 'aria-label': 'Search text' }}
               fullWidth
             />
+            <FormControl size="small" fullWidth>
+              <InputLabel>Collection</InputLabel>
+              <Select label="Collection" value={collectionId} onChange={event => setCollectionId(event.target.value)}>
+                <MenuItem value="">All my documents</MenuItem>
+                {collections.map(collection => (
+                  <MenuItem key={collection.id} value={collection.id}>
+                    {collection.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <FormControlLabel
               control={<Switch checked={useFilter} onChange={event => setUseFilter(event.target.checked)} />}
               label="Use metadata filter"

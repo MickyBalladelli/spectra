@@ -91,5 +91,31 @@ create table if not exists users (
 
 create unique index if not exists users_username_idx on users(username);
 
+create table if not exists collections (
+  id uuid primary key,
+  owner_user_id text not null references users(username) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists collection_documents (
+  collection_id uuid not null references collections(id) on delete cascade,
+  document_id uuid not null references documents(id) on delete cascade,
+  added_by text not null,
+  added_at timestamptz not null default now(),
+  primary key (collection_id, document_id)
+);
+
+create table if not exists collection_shares (
+  collection_id uuid not null references collections(id) on delete cascade,
+  user_id text not null references users(username) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (collection_id, user_id)
+);
+
+create index if not exists collections_owner_user_id_idx on collections(owner_user_id);
+create index if not exists collection_documents_document_id_idx on collection_documents(document_id);
+create index if not exists collection_shares_user_id_idx on collection_shares(user_id);
+
 alter table query_audit_logs add column if not exists user_id text not null default 'local';
 create index if not exists query_audit_logs_user_id_idx on query_audit_logs(user_id);

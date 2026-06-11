@@ -7,6 +7,7 @@ import { indexRoutes } from './routes/indexRoutes.js'
 import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
+import { collectionRoutes } from './routes/collectionRoutes.js'
 
 export function createApp(getIo = () => null) {
   const app = express()
@@ -91,6 +92,7 @@ export function createApp(getIo = () => null) {
   app.use('/api/auth', authRoutes)
   app.use('/api/ingestions', ingestionRoutes)
   app.use('/api/query', queryRoutes)
+  app.use('/api/collections', collectionRoutes)
 
   // Centralized error handling middleware
   app.use((error, request, response, next) => {

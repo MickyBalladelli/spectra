@@ -1,6 +1,7 @@
 import { findChunksByText, findChunksByVector, writeQueryAudit } from '../db/documents.js'
 import { env } from '../config/env.js'
 import { embedText } from '../vector/embedding.js'
+import { userCanAccessCollection } from '../db/collections.js'
 
 function getQueryTerms(query) {
   return query
@@ -56,12 +57,18 @@ function formatResult(row, query, score) {
   }
 }
 
-export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
+export async function executeQuery({ userId, query, filter = {}, topK = 5, collectionId = null }) {
   const startedAt = Date.now()
   const normalizedQuery = normalizeQuery(query) || query
   const vector = embedText(normalizedQuery)
 
-  const exactRows = await findChunksByText({ userId, query: normalizedQuery, limit: topK })
+  if (collectionId && !(await userCanAccessCollection({ userId, collectionId }))) {
+    const error = new Error('Collection not found')
+    error.status = 404
+    throw error
+  }
+
+  const exactRows = await findChunksByText({ userId, query: normalizedQuery, collectionId, limit: topK })
   const exactKeys = new Set(exactRows.map(row => String(row.vectorKey)))
 
   const queryTermCount = getQueryTerms(normalizedQuery).length || 1
@@ -71,6 +78,7 @@ export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
   const vectorRows = await findChunksByVector({
     userId,
     vector,
+    collectionId,
     filter: {
       ...filter,
       userId

@@ -28,6 +28,7 @@ import { IngestionPanel } from './IngestionPanel.jsx'
 import { SearchView } from './SearchView.jsx'
 import { DocumentList } from './DocumentList.jsx'
 import { JobToast } from './JobToast.jsx'
+import { CollectionsView } from './CollectionsView.jsx'
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -36,19 +37,22 @@ export function DashboardShell({ mode, onToggleMode }) {
   const [stats, setStats] = useState(null)
   const [chunks, setChunks] = useState([])
   const [documents, setDocuments] = useState([])
+  const [collections, setCollections] = useState([])
   const [toast, setToast] = useState(null)
   const { socket, status, events } = useSpectraSocket()
   const authToken = getAuthToken()
 
   const loadData = useCallback(async () => {
-    const [nextStats, nextChunks, nextDocuments] = await Promise.all([
+    const [nextStats, nextChunks, nextDocuments, nextCollections] = await Promise.all([
       apiGet('/api/indexes/stats'),
       apiGet('/api/indexes/chunks?limit=1000'),
-      apiGet('/api/indexes/documents')
+      apiGet('/api/indexes/documents'),
+      apiGet('/api/collections')
     ])
     setStats(nextStats)
     setChunks(nextChunks)
     setDocuments(nextDocuments)
+    setCollections(nextCollections)
   }, [])
 
   useEffect(() => {
@@ -200,6 +204,7 @@ export function DashboardShell({ mode, onToggleMode }) {
               <Tab value="overview" label="Overview" />
               <Tab value="ingest" label="Ingest" />
               <Tab value="documents" label="Documents" />
+              <Tab value="collections" label="Collections" />
               <Tab value="explorer" label="Explorer" />
               <Tab value="search" label="Search" />
               <Tab value="console" label="Console" />
@@ -222,11 +227,14 @@ export function DashboardShell({ mode, onToggleMode }) {
             <Box hidden={tab !== 'documents'}>
               <DocumentList documents={documents} onDocumentRemoved={loadData} />
             </Box>
+            <Box hidden={tab !== 'collections'}>
+              <CollectionsView documents={documents} collections={collections} onChanged={loadData} />
+            </Box>
             <Box hidden={tab !== 'explorer'}>
               <DataExplorer chunks={chunks} />
             </Box>
             <Box hidden={tab !== 'search'}>
-              <SearchView socket={socket} />
+              <SearchView socket={socket} collections={collections} />
             </Box>
             <Box hidden={tab !== 'console'}>
               <ConsolePanel events={events} />

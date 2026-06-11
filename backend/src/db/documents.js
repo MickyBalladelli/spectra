@@ -274,18 +274,37 @@ export async function getDocument({ userId, documentId }) {
   return result.rows[0] || null
 }
 
-export async function findChunksByVector({ userId, vector, filter = {}, limit = 5 }) {
-  const values = [userId, toVectorLiteral(vector), filter, limit]
+export async function findChunksByVector({ userId, vector, filter = {}, collectionId = null, limit = 5 }) {
+  const values = [userId, toVectorLiteral(vector), filter, collectionId, limit]
   const result = await withClient(client => client.query(
     `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title,
        round((1 - (dc.embedding <=> $2::vector))::numeric, 4)::float as score
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1 and d.user_id = $1
+     where (
+         ($4::uuid is null and dc.user_id = $1 and d.user_id = $1)
+         or (
+           $4::uuid is not null
+           and exists (
+             select 1
+             from collection_documents cd
+             join collections c on c.id = cd.collection_id
+             where cd.collection_id = $4::uuid
+               and cd.document_id = d.id
+               and (
+                 c.owner_user_id = $1
+                 or exists (
+                   select 1 from collection_shares cs
+                   where cs.collection_id = c.id and cs.user_id = $1
+                 )
+               )
+           )
+         )
+       )
        and dc.embedding is not null
        and dc.metadata @> $3::jsonb
      order by dc.embedding <=> $2::vector
-     limit $4`,
+     limit $5`,
     values
   ))
 
@@ -310,7 +329,7 @@ export async function findChunksByVector({ userId, vector, filter = {}, limit = 
  * @property {Object} return.metadata - Additional metadata about the chunk
  * @property {string} return.title - The title of the parent document
  */
-export async function findChunksByText({ userId, query, limit = 5 }) {
+export async function findChunksByText({ userId, query, collectionId = null, limit = 5 }) {
   if (!query || !query.trim()) return []
   const terms = query
     .toLowerCase()
@@ -329,16 +348,34 @@ export async function findChunksByText({ userId, query, limit = 5 }) {
        ) as "keywordHits"
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1
-       and d.user_id = $1
+     where (
+         ($3::uuid is null and dc.user_id = $1 and d.user_id = $1)
+         or (
+           $3::uuid is not null
+           and exists (
+             select 1
+             from collection_documents cd
+             join collections c on c.id = cd.collection_id
+             where cd.collection_id = $3::uuid
+               and cd.document_id = d.id
+               and (
+                 c.owner_user_id = $1
+                 or exists (
+                   select 1 from collection_shares cs
+                   where cs.collection_id = c.id and cs.user_id = $1
+                 )
+               )
+           )
+         )
+       )
        and exists (
          select 1
          from unnest($2::text[]) term
          where lower(dc.content) like '%' || term || '%'
        )
      order by "keywordHits" desc, dc.created_at desc
-     limit $3`,
-    [userId, terms, limit]
+     limit $4`,
+    [userId, terms, collectionId, limit]
   ))
 
   return result.rows
