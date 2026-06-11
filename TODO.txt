@@ -1,8 +1,5 @@
 Here is strong improvement list, in good order:
 
-Replace local JSON vector store
-  Use pgvector, Qdrant, LanceDB, or SQLite vector extension
-  Current temp/JSON store okay for demo, not solid long-term
 Real background worker
   Move ingest jobs out of Express request process
   Use a worker queue: BullMQ, pg-boss, or plain Postgres polling

@@ -4,8 +4,10 @@ import { createApp } from './app.js'
 import { env, isAllowedFrontendOrigin } from './config/env.js'
 import { pool, withClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
+import { startIngestionJobEvents } from './services/ingestionJobEvents.js'
 
 let io
+let stopIngestionJobEvents = async () => {}
 const app = createApp(() => io)
 const server = http.createServer(app)
 io = new Server(server, {
@@ -68,12 +70,18 @@ async function ensureDatabaseSchema() {
           error text,
           payload jsonb not null default '{}',
           result jsonb,
+          worker_id text,
+          locked_at timestamptz,
+          attempts integer not null default 0,
           created_at timestamptz not null default now(),
           started_at timestamptz,
           completed_at timestamptz,
           updated_at timestamptz not null default now()
         )
       `)
+      await client.query(`alter table ingestion_jobs add column if not exists worker_id text`)
+      await client.query(`alter table ingestion_jobs add column if not exists locked_at timestamptz`)
+      await client.query(`alter table ingestion_jobs add column if not exists attempts integer not null default 0`)
       await client.query(`create index if not exists ingestion_jobs_user_id_idx on ingestion_jobs(user_id)`)
       await client.query(`create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status)`)
       await client.query(`create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc)`)
@@ -87,6 +95,7 @@ registerSockets(io)
 
 async function startServer() {
   await ensureDatabaseSchema()
+  stopIngestionJobEvents = await startIngestionJobEvents(io)
 
   server.listen(env.port, () => {
     console.log(`Spectra backend listening on ${env.port}`)
@@ -100,6 +109,7 @@ startServer().catch(error => {
 
 async function shutdown(signal) {
   console.log(`${signal} received, closing Spectra backend`)
+  await stopIngestionJobEvents()
   io.close()
   server.close(async () => {
     await pool.end()

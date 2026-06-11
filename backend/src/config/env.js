@@ -29,5 +29,6 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL || 'postgres://spectra:spectra@localhost:5432/spectra',
   frontendOrigins,
   jwtSecret: process.env.JWT_SECRET || 'spectra-dev-secret',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d'
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  ingestionWorkerPollMs: Number(process.env.INGESTION_WORKER_POLL_MS || 1000)
 }

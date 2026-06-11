@@ -18,6 +18,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 - React dashboard with Overview, Ingest, Documents, Explorer, Search, and Console tabs
 - Authenticated document ingestion
 - Durable ingestion jobs with status history
+- Real background ingestion worker backed by PostgreSQL job claiming
 - Text, Markdown, JSON, CSV, and PDF file reading in the browser
 - Batch ingestion for multiple files
 - Real-time ingestion status with Socket.IO
@@ -34,7 +35,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 ## Layout
 
 - `frontend`: Vite, React, Material UI dashboard
-- `backend`: Express, Socket.io, PostgreSQL pool, pgvector search
+- `backend`: Express, Socket.io, PostgreSQL pool, pgvector search, ingestion worker
 
 ## Quick Setup
 
@@ -46,3 +47,4 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 ## Maintenance
 
 - Rebuild vectors from PostgreSQL chunks with `npm run vectors:rebuild -w backend`
+- Run only the ingestion worker with `npm run worker -w backend`

@@ -67,12 +67,18 @@ create table if not exists ingestion_jobs (
   error text,
   payload jsonb not null default '{}',
   result jsonb,
+  worker_id text,
+  locked_at timestamptz,
+  attempts integer not null default 0,
   created_at timestamptz not null default now(),
   started_at timestamptz,
   completed_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
+alter table ingestion_jobs add column if not exists worker_id text;
+alter table ingestion_jobs add column if not exists locked_at timestamptz;
+alter table ingestion_jobs add column if not exists attempts integer not null default 0;
 create index if not exists ingestion_jobs_user_id_idx on ingestion_jobs(user_id);
 create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status);
 create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc);

@@ -1,4 +1,3 @@
-import { ingestDocument } from '../services/ingestionService.js'
 import { executeQuery } from '../services/queryService.js'
 import { getUserIdFromSocket } from '../http/userScope.js'
 
@@ -13,16 +12,8 @@ export function registerSockets(io) {
       at: new Date().toISOString()
     })
 
-    socket.on('ingestion:start', async payload => {
-      try {
-        const result = await ingestDocument({ ...payload, userId }, progress => {
-          socket.emit('ingestion:progress', { userId, ...progress })
-        })
-
-        socket.emit('ingestion:completed', { userId, ...result })
-      } catch (error) {
-        socket.emit('ingestion:error', { message: error.message })
-      }
+    socket.on('ingestion:start', () => {
+      socket.emit('ingestion:error', { message: 'Use POST /api/ingestions to enqueue ingestion jobs' })
     })
 
     socket.on('query:execute', async payload => {
