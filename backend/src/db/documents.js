@@ -299,15 +299,33 @@ export async function findChunksByVector({ userId, vector, filter = {}, limit = 
  */
 export async function findChunksByText({ userId, query, limit = 5 }) {
   if (!query || !query.trim()) return []
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map(term => term.replace(/[^\p{L}\p{N}_-]/gu, ''))
+    .filter(term => term.length > 1)
+
+  if (terms.length === 0) return []
 
   const result = await withClient(client => client.query(
-    `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title
+    `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title,
+       (
+         select count(*)::int
+         from unnest($2::text[]) term
+         where lower(dc.content) like '%' || term || '%'
+       ) as "keywordHits"
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1 and d.user_id = $1 and dc.content ilike $2
-     order by dc.created_at desc
+     where dc.user_id = $1
+       and d.user_id = $1
+       and exists (
+         select 1
+         from unnest($2::text[]) term
+         where lower(dc.content) like '%' || term || '%'
+       )
+     order by "keywordHits" desc, dc.created_at desc
      limit $3`,
-    [userId, `%${query}%`, limit]
+    [userId, terms, limit]
   ))
 
   return result.rows

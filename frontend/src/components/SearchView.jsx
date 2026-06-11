@@ -19,6 +19,12 @@ const filterExamples = [
   }
 ]
 
+function getConfidenceColor(confidence) {
+  if (confidence === 'high') return 'success'
+  if (confidence === 'medium') return 'primary'
+  return 'warning'
+}
+
 export function SearchView({ socket }) {
   const [query, setQuery] = useState('Find vector compression notes')
   const [useFilter, setUseFilter] = useState(false)
@@ -26,6 +32,7 @@ export function SearchView({ socket }) {
   const [filterError, setFilterError] = useState('')
   const [latency, setLatency] = useState(null)
   const [results, setResults] = useState([])
+  const [normalizedQuery, setNormalizedQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
   const isSignedIn = Boolean(getAuthToken())
@@ -34,6 +41,7 @@ export function SearchView({ socket }) {
     const handleResults = payload => {
       setLatency(payload.latencyMs)
       setResults(payload.results)
+      setNormalizedQuery(payload.normalizedQuery || '')
       setSearchError('')
       setLoading(false)
     }
@@ -150,6 +158,7 @@ export function SearchView({ socket }) {
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
             <Typography variant="h6">Results</Typography>
             <Stack direction="row" spacing={1}>
+              {normalizedQuery && normalizedQuery !== query.trim() && <Chip size="small" label={`searched: ${normalizedQuery}`} />}
               {latency !== null && <Chip size="small" label={`${latency}ms`} />}
               {results.length > 0 && <Chip size="small" label={`${results.length} hits`} color="primary" variant="outlined" />}
             </Stack>
@@ -179,16 +188,19 @@ export function SearchView({ socket }) {
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between" gap={2}>
                     <Typography variant="subtitle2">{result.title}</Typography>
-                    <Chip size="small" color="success" variant="outlined" label={result.score} />
+                    <Stack direction="row" spacing={1}>
+                      <Chip size="small" color={getConfidenceColor(result.confidence)} variant="outlined" label={result.confidence || 'low'} />
+                      <Chip size="small" color="success" variant="outlined" label={result.score} />
+                    </Stack>
                   </Stack>
                   <Typography color="text.secondary">
-                    <HighlightedText text={result.content} query={query} />
+                    <HighlightedText text={result.content} query={normalizedQuery || query} />
                   </Typography>
                 </Stack>
               </Paper>
             ))
           ) : (
-            <Box sx={{ p: 3, color: 'text.secondary' }}>No results yet. Try search.</Box>
+            <Box sx={{ p: 3, color: 'text.secondary' }}>No confident results yet. Try search.</Box>
           )}
         </Stack>
       </Grid>

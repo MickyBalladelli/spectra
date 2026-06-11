@@ -30,5 +30,6 @@ export const env = {
   frontendOrigins,
   jwtSecret: process.env.JWT_SECRET || 'spectra-dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  ingestionWorkerPollMs: Number(process.env.INGESTION_WORKER_POLL_MS || 1000)
+  ingestionWorkerPollMs: Number(process.env.INGESTION_WORKER_POLL_MS || 1000),
+  searchMinScore: Number(process.env.SEARCH_MIN_SCORE || 0.35)
 }

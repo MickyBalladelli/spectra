@@ -1,4 +1,5 @@
 import { findChunksByText, findChunksByVector, writeQueryAudit } from '../db/documents.js'
+import { env } from '../config/env.js'
 import { embedText } from '../vector/embedding.js'
 
 function getQueryTerms(query) {
@@ -7,6 +8,13 @@ function getQueryTerms(query) {
     .split(/\s+/)
     .map(term => term.replace(/[^\p{L}\p{N}_-]/gu, ''))
     .filter(term => term.length > 1)
+}
+
+function normalizeQuery(query) {
+  return String(query || '')
+    .trim()
+    .replace(/^(please\s+)?(find|search|show|look\s+for|get|give\s+me|tell\s+me\s+about)\s+/i, '')
+    .replace(/\s+/g, ' ')
 }
 
 function createSnippet(content, query) {
@@ -33,21 +41,33 @@ function createSnippet(content, query) {
 function formatResult(row, query, score) {
   if (!row) return null
 
+  const terms = getQueryTerms(query)
+  const keywordHits = terms
+    .filter(term => String(row.content || '').toLowerCase().includes(term))
+    .length
+  const adjustedScore = Math.max(score, terms.length ? keywordHits / terms.length : score)
+
   return {
     ...row,
     content: createSnippet(row.content, query),
-    score
+    keywordHits,
+    confidence: adjustedScore >= 0.55 ? 'high' : adjustedScore >= env.searchMinScore ? 'medium' : 'low',
+    score: Number(adjustedScore.toFixed(4))
   }
 }
 
 export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
   const startedAt = Date.now()
-  const vector = embedText(query)
+  const normalizedQuery = normalizeQuery(query) || query
+  const vector = embedText(normalizedQuery)
 
-  const exactRows = await findChunksByText({ userId, query, limit: topK })
+  const exactRows = await findChunksByText({ userId, query: normalizedQuery, limit: topK })
   const exactKeys = new Set(exactRows.map(row => String(row.vectorKey)))
 
-  const exactResults = exactRows.map(row => formatResult(row, query, 1.0))
+  const queryTermCount = getQueryTerms(normalizedQuery).length || 1
+  const exactResults = exactRows
+    .map(row => formatResult(row, normalizedQuery, (row.keywordHits || 0) / queryTermCount))
+    .filter(result => result.score >= env.searchMinScore)
   const vectorRows = await findChunksByVector({
     userId,
     vector,
@@ -59,8 +79,9 @@ export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
   })
 
   const vectorResults = vectorRows
-    .map(row => formatResult(row, query, row.score))
-    .filter(result => result?.id && !exactKeys.has(String(result.vectorKey)))
+    .map(row => formatResult(row, normalizedQuery, row.score))
+    .filter(result => result?.id && result.score >= env.searchMinScore && !exactKeys.has(String(result.vectorKey)))
+    .sort((left, right) => (right.keywordHits - left.keywordHits) || (right.score - left.score))
 
   const results = exactResults.concat(vectorResults).slice(0, topK)
   const latencyMs = Date.now() - startedAt
@@ -75,6 +96,7 @@ export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
 
   return {
     latencyMs,
+    normalizedQuery,
     results
   }
 }
