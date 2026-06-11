@@ -63,6 +63,38 @@ export async function apiPost(path, body) {
   return response.json()
 }
 
+export async function apiUploadFiles(path, files, metadata = {}) {
+  const formData = new FormData()
+
+  for (const file of files) {
+    formData.append('files', file, file.name)
+  }
+
+  formData.append('metadata', JSON.stringify(metadata))
+
+  let response
+
+  try {
+    response = await fetch(`${apiUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'X-Spectra-User': getUserId(),
+        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
+      },
+      body: formData
+    })
+  } catch {
+    throw new Error(`Cannot reach API${apiUrl ? ` at ${apiUrl}` : ''}`)
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}))
+    throw new Error(errorBody.error || errorBody.details || `POST ${path} failed`)
+  }
+
+  return response.json()
+}
+
 export async function apiDelete(path) {
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'DELETE',

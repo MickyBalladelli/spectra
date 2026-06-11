@@ -24,6 +24,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.0",
+    "pdfjs-dist": "^6.0.227",
     "pg": "^8.13.1",
     "socket.io": "^4.8.1",
     "uuid": "^11.0.5",

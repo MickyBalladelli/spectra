@@ -3,10 +3,6 @@ import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import ContentPasteIcon from '@mui/icons-material/ContentPaste'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs'
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const acceptedFileTypes = '.txt,.md,.markdown,.json,.csv,.pdf,application/pdf'
 
@@ -14,84 +10,31 @@ function isPdf(file) {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 }
 
-async function readPdf(file) {
-  const buffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise
-  const pages = []
-  let pageNumber = 1
-
-  while (pageNumber <= pdf.numPages) {
-    const page = await pdf.getPage(pageNumber)
-    const content = await page.getTextContent()
-    const text = content.items
-      .map(item => item.str)
-      .filter(Boolean)
-      .join(' ')
-
-    pages.push(text)
-    pageNumber += 1
-  }
-
-  return pages.join('\n\n')
+function formatBytes(value) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
-async function readFile(file) {
-  if (isPdf(file)) return readPdf(file)
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsText(file)
-  })
-}
-
-export function DocumentInputZone({ title, text, onTitleChange, onTextChange, onSourceTypeChange, onDocumentsChange }) {
+export function DocumentInputZone({ title, text, files = [], onTitleChange, onTextChange, onSourceTypeChange, onFilesChange }) {
   const inputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [isReading, setIsReading] = useState(false)
   const [error, setError] = useState('')
 
-  function clearBatchDocuments() {
-    onDocumentsChange?.([])
+  function clearFiles() {
+    onFilesChange?.([])
   }
 
-  async function useFiles(files) {
-    const fileList = Array.from(files || [])
+  function useFiles(nextFiles) {
+    const fileList = Array.from(nextFiles || [])
     if (fileList.length === 0) return
 
-    setIsReading(true)
     setError('')
 
-    try {
-      const chunks = await Promise.all(fileList.map(readFile))
-      const names = fileList.map(file => file.name)
-      const hasPdf = fileList.some(isPdf)
-      const documents = fileList.map((file, index) => ({
-        title: file.name,
-        text: chunks[index],
-        sourceType: isPdf(file) ? 'pdf' : 'file',
-        metadata: { sourceFileName: file.name }
-      }))
-
-      if (documents.length > 1) {
-        onDocumentsChange?.(documents)
-        onTitleChange(names[0])
-        onTextChange(chunks[0])
-        onSourceTypeChange('batch')
-      } else {
-        onDocumentsChange?.([])
-        onTitleChange(names[0])
-        onTextChange(chunks[0])
-        onSourceTypeChange(hasPdf ? 'pdf' : 'file')
-      }
-    } catch {
-      setError('Could not read file')
-      onDocumentsChange?.([])
-    } finally {
-      setIsReading(false)
-    }
+    onFilesChange?.(fileList)
+    onTitleChange(fileList.length === 1 ? fileList[0].name : `${fileList.length} files`)
+    onTextChange('')
+    onSourceTypeChange('file-upload')
   }
 
   function handleDrop(event) {
@@ -104,7 +47,7 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
     const pastedText = event.clipboardData.getData('text')
     if (!pastedText) return
 
-    clearBatchDocuments()
+    clearFiles()
     onTextChange(pastedText)
     onSourceTypeChange('paste')
 
@@ -122,7 +65,7 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
       <Box
         role="region"
         aria-label="Document dropzone"
-        aria-busy={isReading}
+        aria-busy={false}
         onDragEnter={event => {
           event.preventDefault()
           setIsDragging(true)
@@ -153,8 +96,8 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
               Paste text here or browse text, Markdown, JSON, CSV, or PDF files
             </Typography>
           </Box>
-          <Button startIcon={<FolderOpenIcon />} variant="outlined" onClick={openFilePicker} disabled={isReading}>
-            {isReading ? 'Reading files' : 'Browse files'}
+          <Button startIcon={<FolderOpenIcon />} variant="outlined" onClick={openFilePicker}>
+            Browse files
           </Button>
           <input
             ref={inputRef}
@@ -172,6 +115,15 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
               {error}
             </Typography>
           )}
+          {files.length > 0 && (
+            <Box sx={{ width: '100%', maxWidth: 560, textAlign: 'left' }}>
+              {files.map(file => (
+                <Typography key={`${file.name}-${file.size}`} variant="body2" color="text.secondary">
+                  {file.name} - {formatBytes(file.size)}
+                </Typography>
+              ))}
+            </Box>
+          )}
         </Stack>
       </Box>
 
@@ -179,7 +131,7 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
         label="Title"
         value={title}
         onChange={event => {
-          clearBatchDocuments()
+          clearFiles()
           onTitleChange(event.target.value)
         }}
       />
@@ -187,7 +139,7 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
         label="Raw text or Markdown"
         value={text}
         onChange={event => {
-          clearBatchDocuments()
+          clearFiles()
           onTextChange(event.target.value)
           onSourceTypeChange('raw')
         }}
@@ -204,6 +156,7 @@ export function DocumentInputZone({ title, text, onTitleChange, onTextChange, on
 
       <Button startIcon={<ContentPasteIcon />} variant="text" onClick={() => navigator.clipboard.readText().then(value => {
         if (!value) return
+        clearFiles()
         onTextChange(value)
         onSourceTypeChange('paste')
       }).catch(() => {})}>

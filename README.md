@@ -19,7 +19,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 - Authenticated document ingestion
 - Durable ingestion jobs with status history
 - Real background ingestion worker backed by PostgreSQL job claiming
-- Text, Markdown, JSON, CSV, and PDF file reading in the browser
+- Server-side upload parsing for text, Markdown, JSON, CSV, and PDF files
 - Batch ingestion for multiple files
 - Real-time ingestion status with Socket.IO
 - Duplicate document detection by content hash

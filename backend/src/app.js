@@ -19,7 +19,7 @@ export function createApp(getIo = () => null) {
       callback(null, isAllowedFrontendOrigin(origin))
     }
   }))
-  app.use(express.json({ limit: '100mb' }))
+  app.use(express.json({ limit: '10mb' }))
   app.use((request, response, next) => {
     request.io = getIo()
     next()
@@ -94,7 +94,7 @@ export function createApp(getIo = () => null) {
 
   // Centralized error handling middleware
   app.use((error, request, response, next) => {
-    const status = error.name === 'ZodError' ? 400 : 500
+    const status = error.status || (error.name === 'ZodError' ? 400 : 500)
 
     logger.error('Request failed:', {
       status,

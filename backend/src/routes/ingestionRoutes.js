@@ -4,6 +4,7 @@ import { createIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { deleteDocument } from '../db/documents.js'
+import { uploadedFilesToPayload } from '../services/uploadParser.js'
 
 const documentSchema = z.object({
   title: z.string().min(1),
@@ -37,6 +38,28 @@ ingestionRoutes.post('/', requireAuth, async (request, response, next) => {
     next(error)
   }
 })
+
+ingestionRoutes.post(
+  '/files',
+  requireAuth,
+  express.raw({ type: 'multipart/form-data', limit: '50mb' }),
+  async (request, response, next) => {
+    try {
+      const userId = getUserIdFromRequest(request)
+      const payload = await uploadedFilesToPayload({
+        request,
+        baseMetadata: { source: 'server-upload' }
+      })
+      const documentsTotal = payload.documents.length
+      const title = documentsTotal === 1 ? payload.documents[0].title : `${documentsTotal} files`
+      const job = await createIngestionJob({ userId, title, documentsTotal, payload })
+
+      response.status(202).json({ job: toPublicIngestionJob(job) })
+    } catch (error) {
+      next(error)
+    }
+  }
+)
 
 ingestionRoutes.get('/jobs', requireAuth, async (request, response, next) => {
   try {

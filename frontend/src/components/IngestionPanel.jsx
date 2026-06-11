@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { apiGet, apiPost } from '../api/client.js'
+import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
 export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [title, setTitle] = useState('Demo document')
   const [text, setText] = useState('Spectra indexes dense vectors and keeps document metadata in PostgreSQL.')
-  const [documents, setDocuments] = useState([])
+  const [files, setFiles] = useState([])
   const [sourceType, setSourceType] = useState('raw')
   const [progress, setProgress] = useState({ percent: 0, message: 'Idle' })
   const [error, setError] = useState('')
@@ -60,14 +60,12 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
     }
 
     setError('')
-    setProgress({ percent: 5, message: documents.length > 0 ? `Queued ${documents.length} documents` : 'Queued' })
-
-    const payload = documents.length > 0
-      ? { documents, metadata: { source: 'dashboard' } }
-      : { title, sourceType, text, metadata: { source: 'dashboard' } }
+    setProgress({ percent: 5, message: files.length > 0 ? `Uploading ${files.length} files` : 'Queued' })
 
     try {
-      const result = await apiPost('/api/ingestions', payload)
+      const result = files.length > 0
+        ? await apiUploadFiles('/api/ingestions/files', files, { source: 'dashboard' })
+        : await apiPost('/api/ingestions', { title, sourceType, text, metadata: { source: 'dashboard' } })
       setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
       setProgress({ percent: result.job.percent || 0, message: result.job.message || 'Queued' })
     } catch (err) {
@@ -77,8 +75,8 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   }
 
   const ingestActive = progress.percent > 0 && progress.percent < 100
-  const hasQueuedDocuments = documents.length > 0
-  const canStart = canIngest && (hasQueuedDocuments || text.trim() !== '')
+  const hasFiles = files.length > 0
+  const canStart = canIngest && (hasFiles || text.trim() !== '')
 
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
@@ -122,10 +120,11 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
         <DocumentInputZone
           title={title}
           text={text}
+          files={files}
           onTitleChange={setTitle}
           onTextChange={setText}
           onSourceTypeChange={setSourceType}
-          onDocumentsChange={setDocuments}
+          onFilesChange={setFiles}
         />
         {jobs.length > 0 && (
           <Paper variant="outlined" sx={{ overflow: 'hidden' }}>

@@ -1,0 +1,187 @@
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+
+const textExtensions = new Set(['.txt', '.md', '.markdown', '.json', '.csv'])
+
+function badRequest(message) {
+  const error = new Error(message)
+  error.status = 400
+  return error
+}
+
+function getExtension(filename) {
+  const match = filename.toLowerCase().match(/\.[^.]+$/)
+  return match ? match[0] : ''
+}
+
+function getHeaderValue(headers, name) {
+  return headers[name.toLowerCase()] || ''
+}
+
+function parseContentDisposition(value) {
+  const parts = value.split(';').map(part => part.trim())
+  const result = {}
+
+  for (const part of parts) {
+    const [key, rawValue] = part.split('=')
+    if (!rawValue) continue
+    result[key] = rawValue.replace(/^"|"$/g, '')
+  }
+
+  return result
+}
+
+function splitBuffer(buffer, delimiter) {
+  const chunks = []
+  let start = 0
+  let index = buffer.indexOf(delimiter, start)
+
+  while (index !== -1) {
+    chunks.push(buffer.subarray(start, index))
+    start = index + delimiter.length
+    index = buffer.indexOf(delimiter, start)
+  }
+
+  chunks.push(buffer.subarray(start))
+  return chunks
+}
+
+function trimPart(buffer) {
+  let start = 0
+  let end = buffer.length
+
+  if (buffer.subarray(0, 2).toString() === '\r\n') start = 2
+  if (buffer.subarray(start, start + 2).toString() === '--') return null
+  if (buffer.subarray(end - 2).toString() === '\r\n') end -= 2
+
+  return buffer.subarray(start, end)
+}
+
+function parseHeaders(buffer) {
+  const marker = Buffer.from('\r\n\r\n')
+  const headerEnd = buffer.indexOf(marker)
+  if (headerEnd === -1) return null
+
+  const headerText = buffer.subarray(0, headerEnd).toString('utf8')
+  const headers = {}
+
+  for (const line of headerText.split('\r\n')) {
+    const separator = line.indexOf(':')
+    if (separator === -1) continue
+    headers[line.slice(0, separator).trim().toLowerCase()] = line.slice(separator + 1).trim()
+  }
+
+  return {
+    headers,
+    body: buffer.subarray(headerEnd + marker.length)
+  }
+}
+
+export function parseMultipartBody(request) {
+  const contentType = request.headers['content-type'] || ''
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/)
+  const boundary = boundaryMatch?.[1] || boundaryMatch?.[2]
+
+  if (!boundary) {
+    throw badRequest('Missing multipart boundary')
+  }
+
+  const files = []
+  const fields = {}
+  const delimiter = Buffer.from(`--${boundary}`)
+
+  for (const rawPart of splitBuffer(request.body, delimiter)) {
+    const part = trimPart(rawPart)
+    if (!part?.length) continue
+
+    const parsed = parseHeaders(part)
+    if (!parsed) continue
+
+    const disposition = parseContentDisposition(getHeaderValue(parsed.headers, 'content-disposition'))
+    if (!disposition.name) continue
+
+    if (disposition.filename) {
+      files.push({
+        fieldName: disposition.name,
+        originalName: disposition.filename,
+        mimeType: getHeaderValue(parsed.headers, 'content-type') || 'application/octet-stream',
+        buffer: parsed.body
+      })
+    } else {
+      fields[disposition.name] = parsed.body.toString('utf8')
+    }
+  }
+
+  return { fields, files }
+}
+
+async function readPdf(buffer) {
+  const pdf = await getDocument({
+    data: new Uint8Array(buffer),
+    disableFontFace: true,
+    isEvalSupported: false
+  }).promise
+  const pages = []
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber)
+    const content = await page.getTextContent()
+    const text = content.items
+      .map(item => item.str)
+      .filter(Boolean)
+      .join(' ')
+
+    pages.push(text)
+  }
+
+  return pages.join('\n\n')
+}
+
+async function fileToDocument(file) {
+  const extension = getExtension(file.originalName)
+  const isPdf = file.mimeType === 'application/pdf' || extension === '.pdf'
+
+  if (!isPdf && !textExtensions.has(extension)) {
+    throw badRequest(`Unsupported file type: ${file.originalName}`)
+  }
+
+  const text = isPdf ? await readPdf(file.buffer) : file.buffer.toString('utf8')
+  if (!text.trim()) {
+    throw badRequest(`No text found in ${file.originalName}`)
+  }
+
+  return {
+    title: file.originalName,
+    sourceType: isPdf ? 'pdf' : 'file',
+    text,
+    metadata: {
+      sourceFileName: file.originalName,
+      mimeType: file.mimeType,
+      byteSize: file.buffer.length
+    }
+  }
+}
+
+export async function uploadedFilesToPayload({ request, baseMetadata = {} }) {
+  const { fields, files } = parseMultipartBody(request)
+  let fieldMetadata = {}
+
+  try {
+    fieldMetadata = fields.metadata ? JSON.parse(fields.metadata) : {}
+  } catch {
+    throw badRequest('Invalid upload metadata')
+  }
+
+  if (files.length === 0) {
+    throw badRequest('No files uploaded')
+  }
+
+  const documents = await Promise.all(files.map(fileToDocument))
+
+  return {
+    documents,
+    metadata: {
+      ...baseMetadata,
+      ...fieldMetadata
+    }
+  }
+}
