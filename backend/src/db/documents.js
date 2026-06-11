@@ -262,6 +262,18 @@ export async function listDocuments({ userId, limit = 50 }) {
   return result.rows
 }
 
+export async function getDocument({ userId, documentId }) {
+  const result = await withClient(client => client.query(
+    `select id, title, source_type as "sourceType", body, metadata, created_at as "createdAt"
+     from documents
+     where user_id = $1 and id = $2
+     limit 1`,
+    [userId, documentId]
+  ))
+
+  return result.rows[0] || null
+}
+
 export async function findChunksByVector({ userId, vector, filter = {}, limit = 5 }) {
   const values = [userId, toVectorLiteral(vector), filter, limit]
   const result = await withClient(client => client.query(

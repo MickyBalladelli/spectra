@@ -27,6 +27,7 @@ import { DataExplorer } from './DataExplorer.jsx'
 import { IngestionPanel } from './IngestionPanel.jsx'
 import { SearchView } from './SearchView.jsx'
 import { DocumentList } from './DocumentList.jsx'
+import { JobToast } from './JobToast.jsx'
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -35,6 +36,7 @@ export function DashboardShell({ mode, onToggleMode }) {
   const [stats, setStats] = useState(null)
   const [chunks, setChunks] = useState([])
   const [documents, setDocuments] = useState([])
+  const [toast, setToast] = useState(null)
   const { socket, status, events } = useSpectraSocket()
   const authToken = getAuthToken()
 
@@ -66,6 +68,45 @@ export function DashboardShell({ mode, onToggleMode }) {
       socket.off('ingestion:completed', refreshData)
     }
   }, [socket, loadData])
+
+  useEffect(() => {
+    const handleIngestionComplete = event => {
+      setToast({
+        severity: 'success',
+        message: `Ingestion complete: ${event.chunkCount ?? event.chunks?.length ?? 0} chunks indexed`
+      })
+    }
+    const handleIngestionError = event => {
+      setToast({
+        severity: 'error',
+        message: event?.message || 'Ingestion failed'
+      })
+    }
+    const handleRebuildComplete = event => {
+      setToast({
+        severity: 'success',
+        message: event?.message || 'Vector rebuild complete'
+      })
+    }
+    const handleRebuildError = event => {
+      setToast({
+        severity: 'error',
+        message: event?.message || 'Vector rebuild failed'
+      })
+    }
+
+    socket.on('ingestion:completed', handleIngestionComplete)
+    socket.on('ingestion:error', handleIngestionError)
+    socket.on('index:rebuild:completed', handleRebuildComplete)
+    socket.on('index:rebuild:error', handleRebuildError)
+
+    return () => {
+      socket.off('ingestion:completed', handleIngestionComplete)
+      socket.off('ingestion:error', handleIngestionError)
+      socket.off('index:rebuild:completed', handleRebuildComplete)
+      socket.off('index:rebuild:error', handleRebuildError)
+    }
+  }, [socket])
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -198,6 +239,7 @@ export function DashboardShell({ mode, onToggleMode }) {
         mode={authMode}
         onClose={() => setAuthOpen(false)}
       />
+      <JobToast toast={toast} onClose={() => setToast(null)} />
     </Box>
   )
 }

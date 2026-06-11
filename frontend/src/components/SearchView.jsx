@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { HighlightedText } from './HighlightedText.jsx'
 import { getAuthToken } from '../userSession.js'
+import { EmptyState } from './EmptyState.jsx'
+import { SearchResultPreviewDrawer } from './SearchResultPreviewDrawer.jsx'
 
 const filterExamples = [
   {
@@ -35,6 +37,8 @@ export function SearchView({ socket }) {
   const [normalizedQuery, setNormalizedQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
+  const [previewResult, setPreviewResult] = useState(null)
+  const inputRef = useRef(null)
   const isSignedIn = Boolean(getAuthToken())
 
   useEffect(() => {
@@ -59,6 +63,26 @@ export function SearchView({ socket }) {
       socket.off('query:error', handleError)
     }
   }, [socket])
+
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        event.preventDefault()
+        inputRef.current?.focus()
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault()
+        execute()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  })
 
   function execute() {
     if (!isSignedIn) {
@@ -99,10 +123,11 @@ export function SearchView({ socket }) {
               </Typography>
             </Box>
             <TextField
+              inputRef={inputRef}
               label="Search text"
               value={query}
               onChange={event => setQuery(event.target.value)}
-              onKeyPress={event => {
+              onKeyDown={event => {
                 if (event.key === 'Enter') {
                   execute()
                 }
@@ -179,10 +204,12 @@ export function SearchView({ socket }) {
             results.map(result => (
               <Paper
                 key={result.id}
+                onClick={() => setPreviewResult(result)}
                 sx={{
                   p: 2,
                   border: 1,
-                  borderColor: 'divider'
+                  borderColor: 'divider',
+                  cursor: 'pointer'
                 }}
               >
                 <Stack spacing={1}>
@@ -200,10 +227,19 @@ export function SearchView({ socket }) {
               </Paper>
             ))
           ) : (
-            <Box sx={{ p: 3, color: 'text.secondary' }}>No confident results yet. Try search.</Box>
+            <EmptyState
+              title="No confident results yet"
+              message="Search documents or adjust filters"
+            />
           )}
         </Stack>
       </Grid>
+      <SearchResultPreviewDrawer
+        result={previewResult}
+        query={normalizedQuery || query}
+        open={Boolean(previewResult)}
+        onClose={() => setPreviewResult(null)}
+      />
     </Grid>
   )
 }

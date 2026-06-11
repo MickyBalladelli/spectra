@@ -8,14 +8,20 @@ import {
   TableRow,
   Typography
 } from '@mui/material'
+import TravelExploreIcon from '@mui/icons-material/TravelExplore'
+import { EmptyState } from './EmptyState.jsx'
 
 export function DataExplorer({ chunks }) {
   const documentCount = new Set((chunks || []).map(chunk => chunk.documentId)).size
 
   if (!chunks || chunks.length === 0) {
     return (
-      <Paper sx={{ p: 3 }}>
-        <Typography color="text.secondary">No indexed chunks available.</Typography>
+      <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
+        <EmptyState
+          icon={<TravelExploreIcon sx={{ fontSize: 48, mb: 2 }} />}
+          title="No indexed chunks"
+          message="Ingest documents to inspect chunks here"
+        />
       </Paper>
     )
   }

@@ -25,10 +25,6 @@ Observability
   Worker logs
   Search latency charts
   Error history in Console
-Index rebuild UI
-  Button to rebuild vector index
-  Show rebuild progress
-  Compare DB chunks vs vector count
 Import/export
   Export documents metadata
   Export chunks
@@ -41,9 +37,3 @@ Deployment
   Docker Compose for app + Postgres + vector store
   Production env examples
   Backup/restore docs
-UI polish
-  Document preview drawer
-  Search result preview drawer
-  Better empty states
-  Keyboard shortcuts for search
-  Toast notifications for job finish/failure
