@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box, Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { apiPost } from '../api/client.js'
+import { apiGet, apiPost } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
 export function IngestionPanel({ socket, canIngest, onCompleted }) {
@@ -11,27 +11,47 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [sourceType, setSourceType] = useState('raw')
   const [progress, setProgress] = useState({ percent: 0, message: 'Idle' })
   const [error, setError] = useState('')
+  const [jobs, setJobs] = useState([])
+
+  async function refreshJobs() {
+    if (!canIngest) return
+    setJobs(await apiGet('/api/ingestions/jobs'))
+  }
 
   useEffect(() => {
     const handleCompleted = result => {
       setProgress({ percent: 100, message: `${result.chunks?.length || 0} chunks indexed` })
+      refreshJobs().catch(() => {})
+      onCompleted?.()
     }
 
     const handleError = payload => {
       setError(payload?.message || 'Ingestion failed')
       setProgress({ percent: 0, message: 'Ingestion failed' })
+      refreshJobs().catch(() => {})
+    }
+
+    const handleJob = job => {
+      setJobs(current => [job, ...current.filter(item => item.id !== job.id)].slice(0, 10))
+      setProgress({ percent: job.percent || 0, message: job.message || job.status })
     }
 
     socket.on('ingestion:progress', setProgress)
     socket.on('ingestion:completed', handleCompleted)
     socket.on('ingestion:error', handleError)
+    socket.on('ingestion:job', handleJob)
 
     return () => {
       socket.off('ingestion:progress', setProgress)
       socket.off('ingestion:completed', handleCompleted)
       socket.off('ingestion:error', handleError)
+      socket.off('ingestion:job', handleJob)
     }
-  }, [socket])
+  }, [socket, canIngest, onCompleted])
+
+  useEffect(() => {
+    refreshJobs().catch(() => {})
+  }, [canIngest])
 
   async function startIngestion() {
     if (!canIngest) {
@@ -48,8 +68,8 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
 
     try {
       const result = await apiPost('/api/ingestions', payload)
-      setProgress({ percent: 100, message: `${result.chunks?.length || 0} chunks indexed` })
-      onCompleted?.()
+      setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
+      setProgress({ percent: result.job.percent || 0, message: result.job.message || 'Queued' })
     } catch (err) {
       setError(err.message)
       setProgress({ percent: 0, message: 'Ingestion failed' })
@@ -107,6 +127,37 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           onSourceTypeChange={setSourceType}
           onDocumentsChange={setDocuments}
         />
+        {jobs.length > 0 && (
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            {jobs.slice(0, 5).map((job, index) => (
+              <Box
+                key={job.id}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 120px 110px' },
+                  gap: 1,
+                  alignItems: 'center',
+                  p: 1.25,
+                  borderTop: index === 0 ? 0 : 1,
+                  borderColor: 'divider'
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {job.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {job.message || job.stage || job.status}
+                  </Typography>
+                </Box>
+                <Chip size="small" label={job.status} color={job.status === 'completed' ? 'success' : job.status === 'failed' ? 'error' : 'default'} />
+                <Typography variant="body2" color="text.secondary">
+                  {job.percent || 0}%
+                </Typography>
+              </Box>
+            ))}
+          </Paper>
+        )}
       </Stack>
     </Paper>
   )

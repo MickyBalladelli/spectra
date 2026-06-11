@@ -17,6 +17,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 
 - React dashboard with Overview, Ingest, Documents, Explorer, Search, and Console tabs
 - Authenticated document ingestion
+- Durable ingestion jobs with status history
 - Text, Markdown, JSON, CSV, and PDF file reading in the browser
 - Batch ingestion for multiple files
 - Real-time ingestion status with Socket.IO
@@ -29,6 +30,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 - Document list with delete actions
 - Cluster stats for documents, vectors, compression, and latency
 - Console view for socket and ingestion events
+- Vector store health check and rebuild command
 
 ## Layout
 
@@ -42,3 +44,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 2. Install dependencies with `npm install`
 3. Create database and tables with `npm run db:setup`
 4. Run app with `npm run dev`
+
+## Maintenance
+
+- Rebuild vectors from PostgreSQL chunks with `npm run vectors:rebuild -w backend`

@@ -46,6 +46,29 @@ async function ensureDatabaseSchema() {
       }
 
       await client.query(`create index if not exists documents_user_content_hash_idx on documents(user_id, content_hash)`)
+      await client.query(`
+        create table if not exists ingestion_jobs (
+          id uuid primary key,
+          user_id text not null,
+          status text not null default 'queued',
+          title text not null,
+          documents_total integer not null default 1,
+          documents_completed integer not null default 0,
+          stage text,
+          percent integer not null default 0,
+          message text,
+          error text,
+          payload jsonb not null default '{}',
+          result jsonb,
+          created_at timestamptz not null default now(),
+          started_at timestamptz,
+          completed_at timestamptz,
+          updated_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`create index if not exists ingestion_jobs_user_id_idx on ingestion_jobs(user_id)`)
+      await client.query(`create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status)`)
+      await client.query(`create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc)`)
     })
   } catch (error) {
     console.warn('Skipping database schema migration:', error.message)

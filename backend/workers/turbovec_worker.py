@@ -238,6 +238,17 @@ def search(payload):
     return {"matches": matches[:top_k]}
 
 
+def stats(payload):
+    """
+    Return vector store health details.
+    """
+    store = load_store()
+    return {
+        "vectors": len(store),
+        "storePath": STORE_PATH
+    }
+
+
 def main():
     """
     Main entry point that processes incoming requests.
@@ -254,6 +265,10 @@ def main():
 
     if operation == "search":
         print(json.dumps(search(payload)))
+        return
+
+    if operation == "stats":
+        print(json.dumps(stats(payload)))
         return
 
     raise ValueError(f"Unknown operation: {operation}")

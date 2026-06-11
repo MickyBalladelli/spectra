@@ -30,7 +30,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
 
   // Skip processing if duplicate found
   if (existingDocument) {
-    emitProgress({ stage: 'duplicate', percent: 100, message: 'Document already indexed' })
+    await emitProgress({ stage: 'duplicate', percent: 100, message: 'Document already indexed' })
 
     return {
       duplicate: true,
@@ -40,13 +40,13 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     }
   }
 
-  emitProgress({ stage: 'metadata', percent: 10, message: 'Saving document' })
+  await emitProgress({ stage: 'metadata', percent: 10, message: 'Saving document' })
   const document = await createDocument({ userId, title, sourceType, text, metadata: documentMetadata })
 
-  emitProgress({ stage: 'chunking', percent: 25, message: 'Chunking text' })
+  await emitProgress({ stage: 'chunking', percent: 25, message: 'Chunking text' })
   const chunks = chunkText(text)
 
-  emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
+  await emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
   const embeddedChunks = chunks.map(chunk => ({
     ...chunk,
     vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
@@ -58,7 +58,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     }
   }))
 
-  emitProgress({ stage: 'indexing', percent: 75, message: 'Writing turbovec index' })
+  await emitProgress({ stage: 'indexing', percent: 75, message: 'Writing turbovec index' })
   const workerResult = await runVectorWorker({
     operation: 'upsert',
     documentId: document.id,
@@ -70,14 +70,14 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     }))
   })
 
-  emitProgress({ stage: 'persisting', percent: 90, message: 'Saving indexed chunks' })
+  await emitProgress({ stage: 'persisting', percent: 90, message: 'Saving indexed chunks' })
   const persistedChunks = await createChunks({
     userId,
     documentId: document.id,
     chunks: embeddedChunks
   })
 
-  emitProgress({ stage: 'completed', percent: 100, message: 'Document indexed' })
+  await emitProgress({ stage: 'completed', percent: 100, message: 'Document indexed' })
 
   return {
     document,
@@ -112,11 +112,11 @@ export async function ingestDocument(payload, emitProgress = () => {}) {
       }
 
       // Process each document with progress tracking
-      const result = await ingestSingleDocument(documentPayload, progress => {
+      const result = await ingestSingleDocument(documentPayload, async progress => {
         const documentPercent = progress.percent || 0
         const percent = Math.round(((index + (documentPercent / 100)) / payload.documents.length) * 100)
 
-        emitProgress({
+        await emitProgress({
           documentIndex: index,
           documentsTotal: payload.documents.length,
           ...progress,

@@ -7,6 +7,7 @@ import { indexRoutes } from './routes/indexRoutes.js'
 import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
+import { runVectorWorker } from './vector/workerBridge.js'
 
 export function createApp(getIo = () => null) {
   const app = express()
@@ -42,14 +43,16 @@ export function createApp(getIo = () => null) {
       }
       healthChecks.push({ name: 'database', ok: dbOk, message: dbMessage })
 
-      // Check worker process (basic check - file existence)
+      // Check worker process
       let workerOk = false
       let workerMessage = ''
+      let workerStats = null
       const fs = await import('fs')
       try {
         if (fs.existsSync('./workers/turbovec_worker.py')) {
           workerOk = true
           workerMessage = 'Worker script exists'
+          workerStats = await runVectorWorker({ operation: 'stats' })
         } else {
           workerOk = false
           workerMessage = 'Worker script not found'
@@ -58,7 +61,7 @@ export function createApp(getIo = () => null) {
         workerOk = false
         workerMessage = `Worker check error: ${error.message}`
       }
-      healthChecks.push({ name: 'worker', ok: workerOk, message: workerMessage })
+      healthChecks.push({ name: 'worker', ok: workerOk, message: workerMessage, stats: workerStats })
 
       const allOk = healthChecks.every(check => check.ok)
 
