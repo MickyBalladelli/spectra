@@ -4,16 +4,27 @@ import {
   IconButton,
   Paper,
   Stack,
+  TextField,
   Typography
 } from '@mui/material'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DeleteIcon from '@mui/icons-material/Delete'
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
 import LanguageIcon from '@mui/icons-material/Language'
+import SearchIcon from '@mui/icons-material/Search'
 import { formatDistanceToNow } from 'date-fns'
+import { useMemo, useState } from 'react'
 import { apiDelete } from '../api/client.js'
 
 export function DocumentList({ documents, onDocumentRemoved }) {
+  const [nameFilter, setNameFilter] = useState('')
+  const filteredDocuments = useMemo(() => {
+    const query = nameFilter.trim().toLowerCase()
+    if (!query) return documents || []
+
+    return (documents || []).filter(doc => String(doc.title || '').toLowerCase().includes(query))
+  }, [documents, nameFilter])
+
   async function removeDocument(documentId) {
     await apiDelete(`/api/indexes/documents/${documentId}`)
     onDocumentRemoved?.()
@@ -31,13 +42,30 @@ export function DocumentList({ documents, onDocumentRemoved }) {
 
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Documents</Typography>
-        <Chip size="small" label={`${documents.length} total`} color="primary" variant="outlined" />
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6">Documents</Typography>
+          <Chip
+            size="small"
+            label={nameFilter ? `${filteredDocuments.length} of ${documents.length}` : `${documents.length} total`}
+            color="primary"
+            variant="outlined"
+          />
+        </Box>
+        <TextField
+          size="small"
+          label="Filter document name"
+          value={nameFilter}
+          onChange={event => setNameFilter(event.target.value)}
+          sx={{ width: { xs: '100%', sm: 320 } }}
+          InputProps={{
+            startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+        />
       </Box>
 
       <Stack sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-        {documents.map((doc, index) => {
+        {filteredDocuments.map((doc, index) => {
           const SourceIcon = doc.sourceType === 'url' ? LanguageIcon : InsertDriveFileIcon
           return (
             <Box
@@ -69,6 +97,11 @@ export function DocumentList({ documents, onDocumentRemoved }) {
             </Box>
           )
         })}
+        {filteredDocuments.length === 0 && (
+          <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+            No documents match this name
+          </Box>
+        )}
       </Stack>
     </Paper>
   )

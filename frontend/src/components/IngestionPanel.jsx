@@ -97,8 +97,15 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Stack spacing={2}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
-          <Box sx={{ flex: 1 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto minmax(220px, 320px)' },
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
             <Typography variant="h6">Document ingestion</Typography>
             {!canIngest && (
               <Typography color="text.secondary">
@@ -115,10 +122,18 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           >
             {isSubmitting ? 'Uploading...' : 'Start ingesting'}
           </Button>
-          <Typography color="text.secondary" sx={{ minWidth: { md: 180 } }}>
+          <Typography
+            color="text.secondary"
+            sx={{
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
             {hasFiles ? `${files.length} files selected - ${progress.message}` : progress.message}
           </Typography>
-        </Stack>
+        </Box>
         {error && (
           <Alert severity="error">
             {error}
