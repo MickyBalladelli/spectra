@@ -1,5 +1,5 @@
 
-Add log filters: type, status, date, user
+
 Add downloadable logs
 Add admin-only observability view
 Add job cancel button

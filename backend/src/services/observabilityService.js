@@ -26,12 +26,13 @@ function writeLog(type, entry) {
       normalizeDetail(entry.detail),
       entry.method || null,
       entry.path || null,
-      entry.status || null,
+      typeof entry.status === 'number' ? entry.status : null,
       entry.latencyMs || null,
       entry.jobId || null,
       entry.workerId || null,
       {
         title: entry.title,
+        status: entry.status,
         event: entry.event,
         stage: entry.stage,
         percent: entry.percent,
@@ -61,26 +62,56 @@ export function recordErrorLog(entry) {
   writeLog('error', entry)
 }
 
-async function listLogs({ userId, type, limit }) {
+async function listLogs({ viewerUserId, type, limit, filters = {} }) {
+  const values = [type]
+  const where = ['type = $1']
+
+  if (type === 'worker') {
+    if (filters.user) {
+      values.push(filters.user)
+      where.push(`user_id = $${values.length}`)
+    }
+  } else {
+    values.push(filters.user || viewerUserId)
+    where.push(`user_id = $${values.length}`)
+  }
+
+  if (filters.status) {
+    values.push(filters.status)
+    where.push(`(
+      status::text = $${values.length}
+      or metadata->>'status' = $${values.length}
+      or metadata->>'event' = $${values.length}
+      or source = $${values.length}
+    )`)
+  }
+
+  if (filters.dateFrom) {
+    values.push(filters.dateFrom)
+    where.push(`created_at >= $${values.length}::timestamptz`)
+  }
+
+  if (filters.dateTo) {
+    values.push(filters.dateTo)
+    where.push(`created_at <= $${values.length}::timestamptz`)
+  }
+
+  values.push(limit)
   const result = await logPool.query(
     `select id, type, user_id as "userId", source, message, detail, method, path,
       status, latency_ms as "latencyMs", job_id as "jobId", worker_id as "workerId",
       metadata, created_at as "at"
      from observability_logs
-     where type = $1
-       and (
-         type = 'worker'
-         or $2::text is null
-         or user_id = $2
-       )
+     where ${where.join(' and ')}
      order by created_at desc
-     limit $3`,
-    [type, userId, limit]
+     limit $${values.length}`,
+    values
   )
 
   return result.rows.map(row => ({
     ...row,
     title: row.metadata?.title,
+    status: row.status || row.metadata?.status,
     event: row.metadata?.event,
     stage: row.metadata?.stage,
     percent: row.metadata?.percent,
@@ -88,18 +119,39 @@ async function listLogs({ userId, type, limit }) {
   }))
 }
 
-export async function getObservabilityLogs({ userId, limit = 50 }) {
-  const [requests, jobs, workers, errors] = await Promise.all([
-    listLogs({ userId, type: 'request', limit }),
-    listLogs({ userId, type: 'job', limit }),
-    listLogs({ userId, type: 'worker', limit }),
-    listLogs({ userId, type: 'error', limit })
-  ])
+export async function getObservabilityLogs({ userId, limit = 50, filters = {} }) {
+  const allowedTypes = ['request', 'job', 'worker', 'error']
+  const types = filters.type && filters.type !== 'all'
+    ? allowedTypes.filter(type => type === filters.type)
+    : allowedTypes
+
+  const entries = await Promise.all(types.map(type => listLogs({
+    viewerUserId: userId,
+    type,
+    limit,
+    filters
+  })))
+  const byType = Object.fromEntries(types.map((type, index) => [type, entries[index]]))
 
   return {
-    requests,
-    jobs,
-    workers,
-    errors
+    requests: byType.request || [],
+    jobs: byType.job || [],
+    workers: byType.worker || [],
+    errors: byType.error || []
+  }
+}
+
+export function sanitizeObservabilityFilters({ viewerUserId, query }) {
+  const requestedUser = String(query.user || '').trim()
+  const user = requestedUser
+    ? requestedUser === viewerUserId ? requestedUser : '__blocked__'
+    : ''
+
+  return {
+    type: ['all', 'request', 'job', 'worker', 'error'].includes(query.type) ? query.type : 'all',
+    status: String(query.status || '').trim(),
+    dateFrom: String(query.dateFrom || '').trim(),
+    dateTo: String(query.dateTo || '').trim(),
+    user
   }
 }

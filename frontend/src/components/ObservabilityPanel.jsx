@@ -90,63 +90,72 @@ function SearchLatencyChart({ rows }) {
   )
 }
 
-export function ObservabilityPanel({ data }) {
+export function ObservabilityPanel({ data, type = 'all' }) {
   const requests = data?.requests || []
   const jobs = data?.jobs || []
   const workers = data?.workers || []
   const errors = data?.errors || []
   const searchLatency = data?.searchLatency || []
+  const show = section => type === 'all' || type === section
 
   return (
     <Stack spacing={2}>
-      <SearchLatencyChart rows={searchLatency} />
+      {type === 'all' && <SearchLatencyChart rows={searchLatency} />}
 
-      <LogTable
-        title="Error history"
-        rows={errors.slice(0, 20)}
-        empty="No errors recorded"
-        columns={[
-          { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
-          { key: 'source', width: '120px', render: row => <Chip size="small" color="error" label={row.source || 'error'} /> },
-          { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="error.main" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
-        ]}
-      />
+      {show('error') && (
+        <LogTable
+          title="Error history"
+          rows={errors.slice(0, 20)}
+          empty="No errors recorded"
+          columns={[
+            { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'source', width: '120px', render: row => <Chip size="small" color="error" label={row.source || 'error'} /> },
+            { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="error.main" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
+          ]}
+        />
+      )}
 
-      <LogTable
-        title="Request logs"
-        rows={requests.slice(0, 20)}
-        empty="No requests recorded"
-        columns={[
-          { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
-          { key: 'method', width: '80px', render: row => <Chip size="small" label={row.method} /> },
-          { key: 'status', width: '90px', render: row => <Chip size="small" color={statusColor(row.status)} label={row.status} /> },
-          { key: 'path', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.path}</Typography> },
-          { key: 'latencyMs', width: '90px', render: row => <Typography variant="body2" color="text.secondary">{row.latencyMs} ms</Typography> }
-        ]}
-      />
+      {show('request') && (
+        <LogTable
+          title="Request logs"
+          rows={requests.slice(0, 20)}
+          empty="No requests recorded"
+          columns={[
+            { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'method', width: '80px', render: row => <Chip size="small" label={row.method} /> },
+            { key: 'status', width: '90px', render: row => <Chip size="small" color={statusColor(row.status)} label={row.status} /> },
+            { key: 'path', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.path}</Typography> },
+            { key: 'latencyMs', width: '90px', render: row => <Typography variant="body2" color="text.secondary">{row.latencyMs} ms</Typography> }
+          ]}
+        />
+      )}
 
-      <LogTable
-        title="Job logs"
-        rows={jobs.slice(0, 20)}
-        empty="No job logs recorded"
-        columns={[
-          { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
-          { key: 'status', width: '120px', render: row => <Chip size="small" label={row.status || row.event} /> },
-          { key: 'title', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.title}</Typography> },
-          { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
-        ]}
-      />
+      {show('job') && (
+        <LogTable
+          title="Job logs"
+          rows={jobs.slice(0, 20)}
+          empty="No job logs recorded"
+          columns={[
+            { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'status', width: '120px', render: row => <Chip size="small" label={row.status || row.event} /> },
+            { key: 'title', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.title}</Typography> },
+            { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
+          ]}
+        />
+      )}
 
-      <LogTable
-        title="Worker logs"
-        rows={workers.slice(0, 20)}
-        empty="No worker logs recorded"
-        columns={[
-          { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
-          { key: 'workerId', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.workerId}</Typography> },
-          { key: 'message', width: '1fr', render: row => <Typography variant="body2" color={row.error ? 'error.main' : 'text.secondary'}>{row.message}</Typography> }
-        ]}
-      />
+      {show('worker') && (
+        <LogTable
+          title="Worker logs"
+          rows={workers.slice(0, 20)}
+          empty="No worker logs recorded"
+          columns={[
+            { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'workerId', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.workerId}</Typography> },
+            { key: 'message', width: '1fr', render: row => <Typography variant="body2" color={row.error ? 'error.main' : 'text.secondary'}>{row.message}</Typography> }
+          ]}
+        />
+      )}
     </Stack>
   )
 }

@@ -2,6 +2,7 @@ import { Box, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { apiGet } from '../api/client.js'
 import { ObservabilityPanel } from './ObservabilityPanel.jsx'
+import { ObservabilityFilters, emptyObservabilityFilters } from './ObservabilityFilters.jsx'
 
 function getEventTitle(event) {
   return event.stage || event.status || 'event'
@@ -24,19 +25,27 @@ function formatEventDate(value) {
 
 export function ConsolePanel({ events }) {
   const [observability, setObservability] = useState(null)
+  const [filters, setFilters] = useState(emptyObservabilityFilters)
 
   useEffect(() => {
-    apiGet('/api/observability')
+    const params = new URLSearchParams({ limit: '50' })
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value)
+    })
+
+    apiGet(`/api/observability?${params.toString()}`)
       .then(setObservability)
       .catch(() => {})
-  }, [events])
+  }, [events, filters])
 
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Stack spacing={2}>
         <Typography variant="h6">Console</Typography>
 
-        <ObservabilityPanel data={observability} />
+        <ObservabilityFilters filters={filters} onChange={setFilters} />
+        <ObservabilityPanel data={observability} type={filters.type} />
 
         <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
           {events.map((event, index) => (

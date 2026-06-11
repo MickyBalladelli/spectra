@@ -444,15 +444,29 @@ export async function writeQueryAudit({ userId, query, filter, latencyMs, result
   ))
 }
 
-export async function listQueryLatency({ userId, limit = 50 }) {
+export async function listQueryLatency({ userId, limit = 50, filters = {} }) {
+  const values = [userId]
+  const where = ['user_id = $1']
+
+  if (filters.dateFrom) {
+    values.push(filters.dateFrom)
+    where.push(`created_at >= $${values.length}::timestamptz`)
+  }
+
+  if (filters.dateTo) {
+    values.push(filters.dateTo)
+    where.push(`created_at <= $${values.length}::timestamptz`)
+  }
+
+  values.push(limit)
   const result = await withClient(client => client.query(
     `select id, query_text as "queryText", latency_ms as "latencyMs",
       result_count as "resultCount", created_at as "createdAt"
      from query_audit_logs
-     where user_id = $1
+     where ${where.join(' and ')}
      order by created_at desc
-     limit $2`,
-    [userId, limit]
+     limit $${values.length}`,
+    values
   ))
 
   return result.rows
