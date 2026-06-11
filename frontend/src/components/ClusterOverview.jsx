@@ -1,8 +1,8 @@
-import { Grid, LinearProgress, Paper, Stack, Typography, Skeleton } from '@mui/material'
+import { Box, Grid, LinearProgress, Paper, Stack, Typography, Skeleton } from '@mui/material'
 
 function MetricCard({ label, value, detail }) {
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 2, border: 1, borderColor: 'divider', height: '100%' }}>
       <Stack spacing={1}>
         <Typography variant="body2" color="text.secondary">{label}</Typography>
         <Typography variant="h4">{value}</Typography>
@@ -78,12 +78,15 @@ export function ClusterOverview({ stats }) {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>Cluster pressure</Typography>
+      <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, gap: 2 }}>
+          <Typography variant="subtitle2">Cluster pressure</Typography>
+          <Typography variant="body2" color="text.secondary">{data.vectors || 0} vectors</Typography>
+        </Box>
         {loading ? (
           <LinearProgress />
         ) : (
-          <LinearProgress variant="determinate" value={Math.min(100, Number(data.vectors || 0) / 10)} />
+          <LinearProgress variant="determinate" value={Math.min(100, Number(data.vectors || 0) / 10)} sx={{ height: 8, borderRadius: 1 }} />
         )}
       </Paper>
     </Stack>

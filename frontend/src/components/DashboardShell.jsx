@@ -4,7 +4,6 @@ import {
   Button,
   Chip,
   Container,
-  Divider,
   IconButton,
   Stack,
   Tab,
@@ -70,7 +69,17 @@ export function DashboardShell({ mode, onToggleMode }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Toolbar sx={{ borderBottom: 1, borderColor: 'divider', gap: 2 }}>
+      <Toolbar
+        sx={{
+          borderBottom: 1,
+          borderColor: 'divider',
+          gap: 2,
+          bgcolor: 'background.paper',
+          position: 'sticky',
+          top: 0,
+          zIndex: theme => theme.zIndex.appBar
+        }}
+      >
         <StorageIcon color="primary" />
         <Typography variant="h6" sx={{ flex: 1 }}>
           Spectra
@@ -112,7 +121,7 @@ export function DashboardShell({ mode, onToggleMode }) {
         <Stack spacing={3}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h4">Vector control room</Typography>
+              <Typography variant="h4" sx={{ fontSize: { xs: 28, md: 34 } }}>Vector control room</Typography>
               <Typography color="text.secondary">
                 turbovec index, metadata, sockets
               </Typography>
@@ -125,22 +134,31 @@ export function DashboardShell({ mode, onToggleMode }) {
             </Button>
           </Stack>
 
-          <Tabs
-            value={tab}
-            onChange={(event, value) => setTab(value)}
-            aria-label="Main navigation tabs"
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
+          <Box
+            sx={{
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              px: 1
+            }}
           >
-            <Tab value="overview" label="Overview" />
-            <Tab value="ingest" label="Ingest" />
-            <Tab value="documents" label="Documents" />
-            <Tab value="explorer" label="Explorer" />
-            <Tab value="search" label="Search" />
-            <Tab value="console" label="Console" />
-          </Tabs>
-          <Divider />
+            <Tabs
+              value={tab}
+              onChange={(event, value) => setTab(value)}
+              aria-label="Main navigation tabs"
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+            >
+              <Tab value="overview" label="Overview" />
+              <Tab value="ingest" label="Ingest" />
+              <Tab value="documents" label="Documents" />
+              <Tab value="explorer" label="Explorer" />
+              <Tab value="search" label="Search" />
+              <Tab value="console" label="Console" />
+            </Tabs>
+          </Box>
 
           <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
             <Box hidden={tab !== 'overview'}>

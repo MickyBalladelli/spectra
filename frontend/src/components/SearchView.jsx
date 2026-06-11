@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Box, Button, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
+import { Box, Button, Chip, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { HighlightedText } from './HighlightedText.jsx'
 
@@ -75,7 +75,7 @@ export function SearchView({ socket }) {
   return (
     <Grid container spacing={2}>
       <Grid item xs={12} md={5}>
-        <Paper sx={{ p: 2, height: '100%' }}>
+        <Paper sx={{ p: 2, height: '100%', border: 1, borderColor: 'divider' }}>
           <Stack spacing={2}>
             <Box>
               <Typography variant="h6">Search</Typography>
@@ -94,6 +94,7 @@ export function SearchView({ socket }) {
               }}
               helperText="Used for semantic vector search"
               inputProps={{ 'aria-label': 'Search text' }}
+              fullWidth
             />
             <FormControlLabel
               control={<Switch checked={useFilter} onChange={event => setUseFilter(event.target.checked)} />}
@@ -121,6 +122,7 @@ export function SearchView({ socket }) {
                   helperText={filterError || 'Examples use sourceType: pdf, paste, file'}
                   multiline
                   minRows={6}
+                  fullWidth
                 />
               </Stack>
             )}
@@ -138,7 +140,13 @@ export function SearchView({ socket }) {
       </Grid>
       <Grid item xs={12} md={7}>
         <Stack spacing={2}>
-          <Typography variant="h6">Results {latency !== null ? `- ${latency}ms` : ''}</Typography>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">Results</Typography>
+            <Stack direction="row" spacing={1}>
+              {latency !== null && <Chip size="small" label={`${latency}ms`} />}
+              {results.length > 0 && <Chip size="small" label={`${results.length} hits`} color="primary" variant="outlined" />}
+            </Stack>
+          </Stack>
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Paper key={i} sx={{ p: 2 }}>
@@ -158,14 +166,13 @@ export function SearchView({ socket }) {
                 sx={{
                   p: 2,
                   border: 1,
-                  borderColor: 'primary.main',
-                  boxShadow: theme => `0 0 24px ${theme.palette.primary.main}22`
+                  borderColor: 'divider'
                 }}
               >
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between" gap={2}>
                     <Typography variant="subtitle2">{result.title}</Typography>
-                    <Typography variant="subtitle2" color="success.main">{result.score}</Typography>
+                    <Chip size="small" color="success" variant="outlined" label={result.score} />
                   </Stack>
                   <Typography color="text.secondary">
                     <HighlightedText text={result.content} query={query} />
@@ -174,7 +181,7 @@ export function SearchView({ socket }) {
               </Paper>
             ))
           ) : (
-            <Box sx={{ p: 3, color: 'text.secondary' }}>No results yet — try a search.</Box>
+            <Box sx={{ p: 3, color: 'text.secondary' }}>No results yet. Try search.</Box>
           )}
         </Stack>
       </Grid>

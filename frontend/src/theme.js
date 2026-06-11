@@ -41,6 +41,20 @@ export function createSpectraTheme(mode) {
             backgroundImage: 'none'
           }
         }
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            minHeight: 40
+          }
+        }
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            minHeight: 44
+          }
+        }
       }
     }
   })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiPost } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
@@ -61,15 +61,17 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const canStart = canIngest && (hasQueuedDocuments || text.trim() !== '')
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Stack spacing={2}>
-        <Typography variant="h6">Document ingestion</Typography>
-        {!canIngest && (
-          <Typography color="text.secondary">
-            Sign in to ingest documents
-          </Typography>
-        )}
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6">Document ingestion</Typography>
+            {!canIngest && (
+              <Typography color="text.secondary">
+                Sign in to ingest documents
+              </Typography>
+            )}
+          </Box>
           <Button
             startIcon={<UploadFileIcon />}
             variant="contained"
@@ -79,12 +81,14 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           >
             {ingestActive ? 'Ingesting...' : 'Start ingesting'}
           </Button>
-          <Typography color="text.secondary">{progress.message}</Typography>
+          <Typography color="text.secondary" sx={{ minWidth: { md: 180 } }}>
+            {progress.message}
+          </Typography>
         </Stack>
         {error && (
-          <Typography color="error">
+          <Alert severity="error">
             {error}
-          </Typography>
+          </Alert>
         )}
         <LinearProgress
           role="progressbar"
@@ -93,6 +97,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           aria-valuenow={progress.percent}
           variant="determinate"
           value={progress.percent}
+          sx={{ height: 8, borderRadius: 1 }}
         />
         <DocumentInputZone
           title={title}

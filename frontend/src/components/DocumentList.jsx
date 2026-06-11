@@ -1,26 +1,23 @@
 import {
   Box,
-  Card,
-  CardActions,
-  CardContent,
-  List,
+  Chip,
+  IconButton,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Stack,
   Typography
 } from '@mui/material'
 import DescriptionIcon from '@mui/icons-material/Description'
+import DeleteIcon from '@mui/icons-material/Delete'
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
 import LanguageIcon from '@mui/icons-material/Language'
 import { formatDistanceToNow } from 'date-fns'
-import { DocumentRemoveButton } from './DocumentRemoveButton.jsx'
+import { apiDelete } from '../api/client.js'
 
 export function DocumentList({ documents, onDocumentRemoved }) {
-  const viewMode = 'list'
+  async function removeDocument(documentId) {
+    await apiDelete(`/api/indexes/documents/${documentId}`)
+    onDocumentRemoved?.()
+  }
 
   if (!documents || documents.length === 0) {
     return (
@@ -33,80 +30,46 @@ export function DocumentList({ documents, onDocumentRemoved }) {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
+    <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Ingested Documents ({documents.length})</Typography>
+        <Typography variant="h6">Documents</Typography>
+        <Chip size="small" label={`${documents.length} total`} color="primary" variant="outlined" />
       </Box>
 
-      {viewMode === 'list' ? (
-        <List>
-          {documents.map((doc) => {
-            const SourceIcon = doc.sourceType === 'url' ? LanguageIcon : InsertDriveFileIcon
-            return (
-              <Card key={doc.id} sx={{ mb: 2, boxShadow: 1 }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <SourceIcon color="primary" />
-                    <Typography variant="subtitle1" sx={{ ml: 1, fontWeight: 'medium' }}>
-                      {doc.title}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Source:
-                    </Typography>
-                    <Typography variant="body2" sx={{ ml: 1, fontWeight: 'medium' }}>
-                      {doc.sourceType}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Ingested {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end', p: 1 }}>
-                  <DocumentRemoveButton
-                    documentId={doc.id}
-                    onRemoved={onDocumentRemoved}
-                  />
-                </CardActions>
-              </Card>
-            )
-          })}
-        </List>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Source Type</TableCell>
-                <TableCell>Ingested</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {documents.map((doc) => (
-                <TableRow key={doc.id} hover>
-                  <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {doc.title}
-                  </TableCell>
-                  <TableCell>{doc.sourceType}</TableCell>
-                  <TableCell>
-                    {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
-                  </TableCell>
-                  <TableCell align="right">
-                    <DocumentRemoveButton
-                      documentId={doc.id}
-                      iconOnly
-                      onRemoved={onDocumentRemoved}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Box>
+      <Stack sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+        {documents.map((doc, index) => {
+          const SourceIcon = doc.sourceType === 'url' ? LanguageIcon : InsertDriveFileIcon
+          return (
+            <Box
+              key={doc.id}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr auto', md: '1fr 140px 180px auto' },
+                gap: 2,
+                alignItems: 'center',
+                p: 1.5,
+                borderTop: index === 0 ? 0 : 1,
+                borderColor: 'divider',
+                bgcolor: index % 2 === 0 ? 'background.default' : 'background.paper'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <SourceIcon color="primary" />
+                <Typography variant="body2" sx={{ ml: 1, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {doc.title}
+                </Typography>
+              </Box>
+              <Chip size="small" label={doc.sourceType} variant="outlined" />
+              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
+              </Typography>
+              <IconButton aria-label={`Remove ${doc.title}`} onClick={() => removeDocument(doc.id)}>
+                <DeleteIcon />
+              </IconButton>
+            </Box>
+          )
+        })}
+      </Stack>
+    </Paper>
   )
 }
