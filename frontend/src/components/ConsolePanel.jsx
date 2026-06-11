@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { apiDownload, apiGet } from '../api/client.js'
 import { ObservabilityPanel } from './ObservabilityPanel.jsx'
 import { ObservabilityFilters, emptyObservabilityFilters } from './ObservabilityFilters.jsx'
+import { RoleManagementPanel } from './RoleManagementPanel.jsx'
 
 function getEventTitle(event) {
   return event.stage || event.status || 'event'
@@ -26,6 +27,7 @@ function formatEventDate(value) {
 export function ConsolePanel({ events }) {
   const [observability, setObservability] = useState(null)
   const [filters, setFilters] = useState(emptyObservabilityFilters)
+  const [viewer, setViewer] = useState({ userId: '', isAdmin: false })
 
   function getObservabilityParams(limit = '50') {
     const params = new URLSearchParams({ limit })
@@ -36,6 +38,18 @@ export function ConsolePanel({ events }) {
 
     return params
   }
+
+  useEffect(() => {
+    apiGet('/api/auth/me')
+      .then(setViewer)
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!viewer.isAdmin && filters.scope === 'admin') {
+      setFilters({ ...filters, scope: 'user' })
+    }
+  }, [viewer.isAdmin, filters])
 
   useEffect(() => {
     const params = getObservabilityParams()
@@ -64,7 +78,13 @@ export function ConsolePanel({ events }) {
       <Stack spacing={2}>
         <Typography variant="h6">Console</Typography>
 
-        <ObservabilityFilters filters={filters} onChange={setFilters} onDownload={downloadLogs} />
+        <RoleManagementPanel isAdmin={viewer.isAdmin} />
+        <ObservabilityFilters
+          filters={filters}
+          onChange={setFilters}
+          onDownload={downloadLogs}
+          isAdmin={viewer.isAdmin}
+        />
         <ObservabilityPanel data={observability} type={filters.type} />
 
         <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>

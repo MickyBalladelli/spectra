@@ -11,6 +11,7 @@ import {
 import DownloadIcon from '@mui/icons-material/Download'
 
 export const emptyObservabilityFilters = {
+  scope: 'user',
   type: 'all',
   status: '',
   dateFrom: '',
@@ -18,7 +19,7 @@ export const emptyObservabilityFilters = {
   user: ''
 }
 
-export function ObservabilityFilters({ filters, onChange, onDownload }) {
+export function ObservabilityFilters({ filters, onChange, onDownload, isAdmin = false }) {
   function updateFilter(name, value) {
     onChange({
       ...filters,
@@ -29,6 +30,20 @@ export function ObservabilityFilters({ filters, onChange, onDownload }) {
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+        {isAdmin && (
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel id="observability-scope-label">View</InputLabel>
+            <Select
+              labelId="observability-scope-label"
+              label="View"
+              value={filters.scope}
+              onChange={event => updateFilter('scope', event.target.value)}
+            >
+              <MenuItem value="user">Mine</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </Select>
+          </FormControl>
+        )}
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel id="observability-type-label">Type</InputLabel>
           <Select
@@ -69,10 +84,11 @@ export function ObservabilityFilters({ filters, onChange, onDownload }) {
         />
         <TextField
           size="small"
-          label="User"
+          label={isAdmin && filters.scope === 'admin' ? 'User or blank' : 'User'}
           value={filters.user}
           onChange={event => updateFilter('user', event.target.value)}
           sx={{ minWidth: 180 }}
+          disabled={!isAdmin && filters.scope !== 'user'}
         />
         <Button
           variant="outlined"

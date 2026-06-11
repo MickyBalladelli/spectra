@@ -107,6 +107,7 @@ create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(creat
 create table if not exists users (
   username text primary key,
   password_hash text not null,
+  role text not null default 'user',
   created_at timestamptz not null default now()
 );
 

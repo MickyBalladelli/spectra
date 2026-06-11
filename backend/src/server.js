@@ -129,7 +129,24 @@ async function ensureDatabaseSchema() {
         create table if not exists users (
           username text primary key,
           password_hash text not null,
+          role text not null default 'user',
           created_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`alter table users add column if not exists role text not null default 'user'`)
+      await client.query(`
+        update users
+        set role = 'admin'
+        where username = (
+          select username
+          from users
+          order by created_at asc
+          limit 1
+        )
+        and not exists (
+          select 1
+          from users
+          where role = 'admin'
         )
       `)
       await client.query(`create unique index if not exists users_username_idx on users(username)`)

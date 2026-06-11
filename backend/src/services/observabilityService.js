@@ -62,11 +62,17 @@ export function recordErrorLog(entry) {
   writeLog('error', entry)
 }
 
-async function listLogs({ viewerUserId, type, limit, filters = {} }) {
+async function listLogs({ viewerUserId, isAdmin = false, type, limit, filters = {} }) {
   const values = [type]
   const where = ['type = $1']
+  const adminScope = isAdmin && filters.scope === 'admin'
 
-  if (type === 'worker') {
+  if (adminScope) {
+    if (filters.user) {
+      values.push(filters.user)
+      where.push(`user_id = $${values.length}`)
+    }
+  } else if (type === 'worker') {
     if (filters.user) {
       values.push(filters.user)
       where.push(`user_id = $${values.length}`)
@@ -119,7 +125,7 @@ async function listLogs({ viewerUserId, type, limit, filters = {} }) {
   }))
 }
 
-export async function getObservabilityLogs({ userId, limit = 50, filters = {} }) {
+export async function getObservabilityLogs({ userId, isAdmin = false, limit = 50, filters = {} }) {
   const allowedTypes = ['request', 'job', 'worker', 'error']
   const types = filters.type && filters.type !== 'all'
     ? allowedTypes.filter(type => type === filters.type)
@@ -127,6 +133,7 @@ export async function getObservabilityLogs({ userId, limit = 50, filters = {} })
 
   const entries = await Promise.all(types.map(type => listLogs({
     viewerUserId: userId,
+    isAdmin,
     type,
     limit,
     filters
@@ -146,8 +153,8 @@ function escapeCsv(value) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
-export async function exportObservabilityLogs({ userId, limit = 1000, filters = {} }) {
-  const logs = await getObservabilityLogs({ userId, limit, filters })
+export async function exportObservabilityLogs({ userId, isAdmin = false, limit = 1000, filters = {} }) {
+  const logs = await getObservabilityLogs({ userId, isAdmin, limit, filters })
   const rows = [
     ...logs.requests,
     ...logs.jobs,
@@ -181,13 +188,17 @@ export async function exportObservabilityLogs({ userId, limit = 1000, filters = 
   ].join('\n')
 }
 
-export function sanitizeObservabilityFilters({ viewerUserId, query }) {
+export function sanitizeObservabilityFilters({ viewerUserId, isAdmin = false, query }) {
   const requestedUser = String(query.user || '').trim()
-  const user = requestedUser
-    ? requestedUser === viewerUserId ? requestedUser : '__blocked__'
-    : ''
+  const adminScope = isAdmin && query.scope === 'admin'
+  const user = adminScope
+    ? requestedUser
+    : requestedUser
+      ? requestedUser === viewerUserId ? requestedUser : '__blocked__'
+      : ''
 
   return {
+    scope: adminScope ? 'admin' : 'user',
     type: ['all', 'request', 'job', 'worker', 'error'].includes(query.type) ? query.type : 'all',
     status: String(query.status || '').trim(),
     dateFrom: String(query.dateFrom || '').trim(),

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
+import { userIsAdmin } from '../db/users.js'
 
 export function generateToken(payload) {
   return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn })
@@ -25,4 +26,16 @@ export function requireAuth(req, res, next) {
 
   req.user = payload
   next()
+}
+
+export async function requireAdmin(req, res, next) {
+  try {
+    if (!req.user?.id || !(await userIsAdmin(req.user.id))) {
+      return res.status(403).json({ error: 'Admin access required' })
+    }
+
+    return next()
+  } catch (error) {
+    return next(error)
+  }
 }

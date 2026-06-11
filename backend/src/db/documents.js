@@ -444,9 +444,20 @@ export async function writeQueryAudit({ userId, query, filter, latencyMs, result
   ))
 }
 
-export async function listQueryLatency({ userId, limit = 50, filters = {} }) {
-  const values = [userId]
-  const where = ['user_id = $1']
+export async function listQueryLatency({ userId, isAdmin = false, limit = 50, filters = {} }) {
+  const values = []
+  const where = []
+  const adminScope = isAdmin && filters.scope === 'admin'
+
+  if (adminScope) {
+    if (filters.user) {
+      values.push(filters.user)
+      where.push(`user_id = $${values.length}`)
+    }
+  } else {
+    values.push(userId)
+    where.push(`user_id = $${values.length}`)
+  }
 
   if (filters.dateFrom) {
     values.push(filters.dateFrom)
@@ -463,7 +474,7 @@ export async function listQueryLatency({ userId, limit = 50, filters = {} }) {
     `select id, query_text as "queryText", latency_ms as "latencyMs",
       result_count as "resultCount", created_at as "createdAt"
      from query_audit_logs
-     where ${where.join(' and ')}
+     ${where.length > 0 ? `where ${where.join(' and ')}` : ''}
      order by created_at desc
      limit $${values.length}`,
     values

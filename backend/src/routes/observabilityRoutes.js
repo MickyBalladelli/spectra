@@ -1,5 +1,6 @@
 import express from 'express'
 import { listQueryLatency } from '../db/documents.js'
+import { userIsAdmin } from '../db/users.js'
 import { requireAuth } from '../http/auth.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { exportObservabilityLogs, getObservabilityLogs, sanitizeObservabilityFilters } from '../services/observabilityService.js'
@@ -11,20 +12,24 @@ observabilityRoutes.use(requireAuth)
 observabilityRoutes.get('/', async (request, response, next) => {
   try {
     const userId = getUserIdFromRequest(request)
+    const isAdmin = await userIsAdmin(userId)
     const limit = Math.min(Number(request.query.limit || 50), 100)
     const filters = sanitizeObservabilityFilters({
       viewerUserId: userId,
+      isAdmin,
       query: request.query
     })
 
     response.json({
       ...await getObservabilityLogs({
         userId,
+        isAdmin,
         limit,
         filters
       }),
       searchLatency: await listQueryLatency({
         userId,
+        isAdmin,
         limit,
         filters
       })
@@ -37,12 +42,15 @@ observabilityRoutes.get('/', async (request, response, next) => {
 observabilityRoutes.get('/download', async (request, response, next) => {
   try {
     const userId = getUserIdFromRequest(request)
+    const isAdmin = await userIsAdmin(userId)
     const filters = sanitizeObservabilityFilters({
       viewerUserId: userId,
+      isAdmin,
       query: request.query
     })
     const csv = await exportObservabilityLogs({
       userId,
+      isAdmin,
       limit: Math.min(Number(request.query.limit || 1000), 5000),
       filters
     })

@@ -60,6 +60,24 @@ export async function apiPost(path, body) {
   return response.json()
 }
 
+export async function apiPatch(path, body) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
+    },
+    body: JSON.stringify(body)
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}))
+    throw new Error(errorBody.error || errorBody.details || `PATCH ${path} failed`)
+  }
+
+  return response.json()
+}
+
 export async function apiUploadFiles(path, files, metadata = {}) {
   const formData = new FormData()
 

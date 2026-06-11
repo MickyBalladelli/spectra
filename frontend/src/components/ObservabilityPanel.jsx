@@ -109,6 +109,7 @@ export function ObservabilityPanel({ data, type = 'all' }) {
           empty="No errors recorded"
           columns={[
             { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'userId', width: '120px', render: row => <Typography variant="caption" color="text.secondary">{row.userId || '-'}</Typography> },
             { key: 'source', width: '120px', render: row => <Chip size="small" color="error" label={row.source || 'error'} /> },
             { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="error.main" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
           ]}
@@ -122,6 +123,7 @@ export function ObservabilityPanel({ data, type = 'all' }) {
           empty="No requests recorded"
           columns={[
             { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'userId', width: '120px', render: row => <Typography variant="caption" color="text.secondary">{row.userId || '-'}</Typography> },
             { key: 'method', width: '80px', render: row => <Chip size="small" label={row.method} /> },
             { key: 'status', width: '90px', render: row => <Chip size="small" color={statusColor(row.status)} label={row.status} /> },
             { key: 'path', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.path}</Typography> },
@@ -137,6 +139,7 @@ export function ObservabilityPanel({ data, type = 'all' }) {
           empty="No job logs recorded"
           columns={[
             { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'userId', width: '120px', render: row => <Typography variant="caption" color="text.secondary">{row.userId || '-'}</Typography> },
             { key: 'status', width: '120px', render: row => <Chip size="small" label={row.status || row.event} /> },
             { key: 'title', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.title}</Typography> },
             { key: 'message', width: '1fr', render: row => <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.message}</Typography> }
@@ -151,6 +154,7 @@ export function ObservabilityPanel({ data, type = 'all' }) {
           empty="No worker logs recorded"
           columns={[
             { key: 'at', width: '180px', render: row => <Typography variant="caption" color="text.secondary">{formatDate(row.at)}</Typography> },
+            { key: 'userId', width: '120px', render: row => <Typography variant="caption" color="text.secondary">{row.userId || '-'}</Typography> },
             { key: 'workerId', width: '1fr', render: row => <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.workerId}</Typography> },
             { key: 'message', width: '1fr', render: row => <Typography variant="body2" color={row.error ? 'error.main' : 'text.secondary'}>{row.message}</Typography> }
           ]}
