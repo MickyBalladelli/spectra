@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Box, Button, Chip, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { HighlightedText } from './HighlightedText.jsx'
+import { getAuthToken } from '../userSession.js'
 
 const filterExamples = [
   {
@@ -27,6 +28,7 @@ export function SearchView({ socket }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
+  const isSignedIn = Boolean(getAuthToken())
 
   useEffect(() => {
     const handleResults = payload => {
@@ -51,6 +53,11 @@ export function SearchView({ socket }) {
   }, [socket])
 
   function execute() {
+    if (!isSignedIn) {
+      setSearchError('Sign in to search documents')
+      return
+    }
+
     let parsedFilter = {}
     setFilterError('')
     setLoading(true)
@@ -130,7 +137,7 @@ export function SearchView({ socket }) {
               startIcon={<PlayArrowIcon />}
               variant="contained"
               onClick={execute}
-              disabled={loading || !query || Boolean(filterError)}
+              disabled={loading || !query || Boolean(filterError) || !isSignedIn}
               aria-label="Execute search"
             >
               {loading ? 'Searching…' : 'Search'}

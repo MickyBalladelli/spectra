@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { io } from 'socket.io-client'
-import { getUserId } from '../userSession.js'
+import { getAuthToken } from '../userSession.js'
 
 function getSocketUrl() {
   const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SOCKET_URL : null
@@ -19,13 +19,14 @@ function getSocketUrl() {
 }
 
 export function useSpectraSocket() {
-  const [status, setStatus] = useState('connecting')
+  const token = getAuthToken()
+  const [status, setStatus] = useState(token ? 'connecting' : 'signed out')
   const [events, setEvents] = useState([])
 
   const socket = useMemo(() => io(getSocketUrl(), {
     autoConnect: false,
     auth: {
-      userId: getUserId()
+      token
     },
     reconnectionAttempts: 10,
     reconnectionDelay: 800,
@@ -34,6 +35,12 @@ export function useSpectraSocket() {
   }), [])
 
   useEffect(() => {
+    if (!token) {
+      setStatus('signed out')
+      socket.disconnect()
+      return
+    }
+
     const pushEvent = event => {
       setEvents(current => [{
         at: new Date().toISOString(),
@@ -88,7 +95,7 @@ export function useSpectraSocket() {
       socket.off('query:progress')
       socket.disconnect()
     }
-  }, [socket])
+  }, [socket, token])
 
   return {
     socket,

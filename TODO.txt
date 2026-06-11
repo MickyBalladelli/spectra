@@ -1,13 +1,5 @@
 Here is strong improvement list, in good order:
 
-Real background worker
-  Move ingest jobs out of Express request process
-  Use a worker queue: BullMQ, pg-boss, or plain Postgres polling
-  Add retry, cancel, resume
-Server-side file upload
-  Upload files to backend
-  Parse PDFs server-side
-  Avoid giant browser JSON payloads
 Better batch ingest UX
   Per-file progress
   Per-file success/failure
@@ -27,10 +19,6 @@ Collections
   Group documents into collections
   Search within collection
   Share collection with another user
-Permissions hardening
-  Ensure every route enforces user ownership
-  Add tests for cross-user access
-  Add admin/debug role later
 Observability
   Request logs
   Job logs

@@ -4,6 +4,12 @@ import { getUserIdFromSocket } from '../http/userScope.js'
 export function registerSockets(io) {
   io.on('connection', socket => {
     const userId = getUserIdFromSocket(socket)
+    if (!userId) {
+      socket.emit('query:error', { message: 'Sign in to use realtime search' })
+      socket.disconnect(true)
+      return
+    }
+
     socket.join(`user:${userId}`)
 
     socket.emit('cluster:heartbeat', {

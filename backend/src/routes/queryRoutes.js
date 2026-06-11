@@ -2,6 +2,7 @@ import express from 'express'
 import { z } from 'zod'
 import { executeQuery } from '../services/queryService.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
+import { requireAuth } from '../http/auth.js'
 
 const querySchema = z.object({
   query: z.string().min(1),
@@ -10,6 +11,8 @@ const querySchema = z.object({
 })
 
 export const queryRoutes = express.Router()
+
+queryRoutes.use(requireAuth)
 
 queryRoutes.post('/', async (request, response, next) => {
   try {

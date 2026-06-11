@@ -150,7 +150,11 @@ export async function createChunks({ userId, documentId, chunks }) {
     const result = await client.query(
       `insert into document_chunks
         (user_id, document_id, chunk_index, vector_key, embedding, content, token_count, metadata)
-       values ${placeholders}
+       select incoming.user_id, incoming.document_id, incoming.chunk_index, incoming.vector_key,
+         incoming.embedding, incoming.content, incoming.token_count, incoming.metadata
+       from (values ${placeholders}) as incoming
+         (user_id, document_id, chunk_index, vector_key, embedding, content, token_count, metadata)
+       join documents d on d.id = incoming.document_id and d.user_id = incoming.user_id
        returning id, document_id as "documentId", chunk_index as "chunkIndex",
          vector_key as "vectorKey", content, token_count as "tokenCount", metadata`,
       values
@@ -217,7 +221,7 @@ export async function listChunks({ userId, limit = 200 }) {
       dc.vector_key as "vectorKey", dc.content, dc.token_count as "tokenCount", dc.created_at as "createdAt"
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1
+     where dc.user_id = $1 and d.user_id = $1
      order by dc.created_at desc
      limit $2`,
     [userId, limit]
@@ -263,7 +267,7 @@ export async function findChunksByVector({ userId, vector, filter = {}, limit = 
        round((1 - (dc.embedding <=> $2::vector))::numeric, 4)::float as score
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1
+     where dc.user_id = $1 and d.user_id = $1
        and dc.embedding is not null
        and dc.metadata @> $3::jsonb
      order by dc.embedding <=> $2::vector
@@ -299,7 +303,7 @@ export async function findChunksByText({ userId, query, limit = 5 }) {
     `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1 and dc.content ilike $2
+     where dc.user_id = $1 and d.user_id = $1 and dc.content ilike $2
      order by dc.created_at desc
      limit $3`,
     [userId, `%${query}%`, limit]

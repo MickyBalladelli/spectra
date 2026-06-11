@@ -1,9 +1,12 @@
-import { randomUUID } from 'crypto'
+import { verifyToken } from './auth.js'
 
 export function getUserIdFromRequest(request) {
-  return request.user?.id || request.get('X-Spectra-User') || request.body?.userId || randomUUID()
+  return request.user.id
 }
 
 export function getUserIdFromSocket(socket) {
-  return socket.handshake.auth?.userId || randomUUID()
+  const token = socket.handshake.auth?.token
+  const payload = token ? verifyToken(token) : null
+
+  return payload?.id || null
 }

@@ -1,8 +1,11 @@
 import express from 'express'
 import { deleteDocument, getClusterStats, listChunks, listDocuments } from '../db/documents.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
+import { requireAuth } from '../http/auth.js'
 
 export const indexRoutes = express.Router()
+
+indexRoutes.use(requireAuth)
 
 indexRoutes.get('/stats', async (request, response, next) => {
   try {

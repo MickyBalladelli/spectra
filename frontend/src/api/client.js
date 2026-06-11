@@ -1,4 +1,3 @@
-import { getUserId } from '../userSession.js'
 import { getAuthToken } from '../userSession.js'
 
 function isLocalApiUrl(value) {
@@ -26,7 +25,6 @@ const apiUrl = getApiUrl()
 export async function apiGet(path) {
   const response = await fetch(`${apiUrl}${path}`, {
     headers: {
-      'X-Spectra-User': getUserId(),
       ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
     }
   })
@@ -46,7 +44,6 @@ export async function apiPost(path, body) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Spectra-User': getUserId(),
         ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
       },
       body: JSON.stringify(body)
@@ -78,7 +75,6 @@ export async function apiUploadFiles(path, files, metadata = {}) {
     response = await fetch(`${apiUrl}${path}`, {
       method: 'POST',
       headers: {
-        'X-Spectra-User': getUserId(),
         ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
       },
       body: formData
@@ -99,7 +95,6 @@ export async function apiDelete(path) {
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'DELETE',
     headers: {
-      'X-Spectra-User': getUserId(),
       ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
     }
   })
