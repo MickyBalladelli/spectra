@@ -3,7 +3,8 @@ import { io } from 'socket.io-client'
 import { getUserId } from '../userSession.js'
 
 function getSocketUrl() {
-  if (window.importMetaEnv?.VITE_SOCKET_URL) return window.importMetaEnv.VITE_SOCKET_URL
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL
+  if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_SOCKET_URL) return window.importMetaEnv.VITE_SOCKET_URL
   if (typeof process !== 'undefined' && process.env?.VITE_SOCKET_URL) return process.env.VITE_SOCKET_URL
   if (typeof window === 'undefined') return 'http://localhost:4000'
 
@@ -21,6 +22,7 @@ export function useSpectraSocket() {
     },
     reconnectionAttempts: 10,
     reconnectionDelay: 800,
+    transports: ['websocket'],
     timeout: 5000
   }), [])
 

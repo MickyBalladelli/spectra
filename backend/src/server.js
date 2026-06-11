@@ -1,7 +1,7 @@
 import http from 'http'
 import { Server } from 'socket.io'
 import { createApp } from './app.js'
-import { env } from './config/env.js'
+import { env, isAllowedFrontendOrigin } from './config/env.js'
 import { pool, withClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
 
@@ -10,7 +10,9 @@ const app = createApp(() => io)
 const server = http.createServer(app)
 io = new Server(server, {
   cors: {
-    origin: env.frontendOrigins,
+    origin(origin, callback) {
+      callback(null, isAllowedFrontendOrigin(origin))
+    },
     methods: ['GET', 'POST']
   }
 })

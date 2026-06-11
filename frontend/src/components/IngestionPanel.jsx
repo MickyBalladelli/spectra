@@ -4,7 +4,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiPost } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
-export function IngestionPanel({ socket, canIngest }) {
+export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [title, setTitle] = useState('Demo document')
   const [text, setText] = useState('Spectra indexes dense vectors and keeps document metadata in PostgreSQL.')
   const [documents, setDocuments] = useState([])
@@ -47,7 +47,9 @@ export function IngestionPanel({ socket, canIngest }) {
       : { title, sourceType, text, metadata: { source: 'dashboard' } }
 
     try {
-      await apiPost('/api/ingestions', payload)
+      const result = await apiPost('/api/ingestions', payload)
+      setProgress({ percent: 100, message: `${result.chunks?.length || 0} chunks indexed` })
+      onCompleted?.()
     } catch (err) {
       setError(err.message)
       setProgress({ percent: 0, message: 'Ingestion failed' })
@@ -79,6 +81,11 @@ export function IngestionPanel({ socket, canIngest }) {
           </Button>
           <Typography color="text.secondary">{progress.message}</Typography>
         </Stack>
+        {error && (
+          <Typography color="error">
+            {error}
+          </Typography>
+        )}
         <LinearProgress
           role="progressbar"
           aria-valuemin={0}
@@ -95,11 +102,6 @@ export function IngestionPanel({ socket, canIngest }) {
           onSourceTypeChange={setSourceType}
           onDocumentsChange={setDocuments}
         />
-        {error && (
-          <Typography color="error" sx={{ mt: 1 }}>
-            {error}
-          </Typography>
-        )}
       </Stack>
     </Paper>
   )

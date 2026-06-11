@@ -151,7 +151,7 @@ export function DashboardShell({ mode, onToggleMode }) {
               }
             </Box>
             <Box hidden={tab !== 'ingest'}>
-              <IngestionPanel socket={socket} canIngest={Boolean(authToken)} />
+              <IngestionPanel socket={socket} canIngest={Boolean(authToken)} onCompleted={loadData} />
             </Box>
             <Box hidden={tab !== 'documents'}>
               <DocumentList documents={documents} onDocumentRemoved={loadData} />

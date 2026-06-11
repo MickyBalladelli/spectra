@@ -177,7 +177,7 @@ def upsert(payload):
         store = load_store()
         next_items = []
         keys = [
-            vector_key(f"{payload.get('documentId')}:{chunk.get('chunkIndex')}:{chunk.get('content')}")
+            chunk.get("vectorKey") or vector_key(f"{payload.get('documentId')}:{chunk.get('chunkIndex')}:{chunk.get('content')}")
             for chunk in chunks
         ]
 

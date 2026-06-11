@@ -1,6 +1,6 @@
 import cors from 'cors'
 import express from 'express'
-import { env } from './config/env.js'
+import { env, isAllowedFrontendOrigin } from './config/env.js'
 import logger from './utils/logger.js'
 import { pool } from './db/pool.js'
 import { indexRoutes } from './routes/indexRoutes.js'
@@ -14,7 +14,11 @@ export function createApp(getIo = () => null) {
   // Initialize logger
   logger.info('Starting Spectra backend application')
 
-  app.use(cors({ origin: env.frontendOrigins }))
+  app.use(cors({
+    origin(origin, callback) {
+      callback(null, isAllowedFrontendOrigin(origin))
+    }
+  }))
   app.use(express.json({ limit: '100mb' }))
   app.use((request, response, next) => {
     request.io = getIo()

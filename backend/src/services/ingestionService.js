@@ -49,6 +49,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
   emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
   const embeddedChunks = chunks.map(chunk => ({
     ...chunk,
+    vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
     vector: embedText(chunk.content),
     metadata: {
       ...documentMetadata,
@@ -61,17 +62,19 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
   const workerResult = await runVectorWorker({
     operation: 'upsert',
     documentId: document.id,
-    chunks: embeddedChunks
+    chunks: embeddedChunks.map(chunk => ({
+      chunkIndex: chunk.chunkIndex,
+      vectorKey: chunk.vectorKey,
+      vector: chunk.vector,
+      metadata: chunk.metadata
+    }))
   })
 
   emitProgress({ stage: 'persisting', percent: 90, message: 'Saving indexed chunks' })
   const persistedChunks = await createChunks({
     userId,
     documentId: document.id,
-    chunks: embeddedChunks.map((chunk, index) => ({
-      ...chunk,
-      vectorKey: workerResult.vectorKeys[index]
-    }))
+    chunks: embeddedChunks
   })
 
   emitProgress({ stage: 'completed', percent: 100, message: 'Document indexed' })

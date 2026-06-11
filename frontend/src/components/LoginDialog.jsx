@@ -21,6 +21,7 @@ function getApiUrl() {
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) return import.meta.env.VITE_API_URL
   if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) return window.importMetaEnv.VITE_API_URL
   if (typeof process !== 'undefined' && process.env?.VITE_API_URL) return process.env.VITE_API_URL
+  if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:4000`
 
   return 'http://localhost:4000'
 }
