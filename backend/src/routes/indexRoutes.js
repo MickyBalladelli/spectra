@@ -2,6 +2,7 @@ import express from 'express'
 import { deleteDocument, getClusterStats, listChunks, listDocuments } from '../db/documents.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
+import { rebuildUserVectorIndex } from '../services/indexMaintenanceService.js'
 
 export const indexRoutes = express.Router()
 
@@ -10,6 +11,42 @@ indexRoutes.use(requireAuth)
 indexRoutes.get('/stats', async (request, response, next) => {
   try {
     response.json(await getClusterStats({ userId: getUserIdFromRequest(request) }))
+  } catch (error) {
+    next(error)
+  }
+})
+
+indexRoutes.post('/rebuild', async (request, response, next) => {
+  try {
+    const userId = getUserIdFromRequest(request)
+    const userRoom = `user:${userId}`
+
+    response.status(202).json({ ok: true, message: 'Vector rebuild started' })
+
+    setImmediate(() => {
+      rebuildUserVectorIndex({
+        userId,
+        emitProgress: progress => {
+          request.io?.to(userRoom).emit('index:rebuild:progress', {
+            userId,
+            ...progress
+          })
+        }
+      })
+        .then(result => {
+          request.io?.to(userRoom).emit('index:rebuild:completed', {
+            userId,
+            ...result,
+            message: 'Vector rebuild complete'
+          })
+        })
+        .catch(error => {
+          request.io?.to(userRoom).emit('index:rebuild:error', {
+            userId,
+            message: error.message
+          })
+        })
+    })
   } catch (error) {
     next(error)
   }

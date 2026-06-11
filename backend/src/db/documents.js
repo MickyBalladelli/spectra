@@ -187,7 +187,8 @@ export async function getClusterStats({ userId }) {
   const result = await withClient(client => client.query(
     `select
       (select count(*)::int from documents where user_id = $1) as documents,
-      (select count(*)::int from document_chunks dc join documents d on d.id = dc.document_id where d.user_id = $1) as vectors,
+      (select count(*)::int from document_chunks dc join documents d on d.id = dc.document_id where dc.user_id = $1 and d.user_id = $1) as chunks,
+      (select count(*)::int from document_chunks dc join documents d on d.id = dc.document_id where dc.user_id = $1 and d.user_id = $1 and dc.embedding is not null) as vectors,
       16 as compression_factor,
       coalesce((select round(avg(latency_ms))::int from query_audit_logs where user_id = $1), 0) as avg_latency_ms`,
     [userId]

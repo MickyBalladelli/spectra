@@ -170,6 +170,8 @@ export function DashboardShell({ mode, onToggleMode }) {
               {stats &&
                 <ClusterOverview
                   stats={stats}
+                  socket={socket}
+                  onRebuilt={loadData}
                 />
               }
             </Box>
