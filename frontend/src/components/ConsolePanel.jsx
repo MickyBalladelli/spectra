@@ -1,6 +1,6 @@
 import { Box, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
-import { apiGet } from '../api/client.js'
+import { apiDownload, apiGet } from '../api/client.js'
 import { ObservabilityPanel } from './ObservabilityPanel.jsx'
 import { ObservabilityFilters, emptyObservabilityFilters } from './ObservabilityFilters.jsx'
 
@@ -27,24 +27,44 @@ export function ConsolePanel({ events }) {
   const [observability, setObservability] = useState(null)
   const [filters, setFilters] = useState(emptyObservabilityFilters)
 
-  useEffect(() => {
-    const params = new URLSearchParams({ limit: '50' })
+  function getObservabilityParams(limit = '50') {
+    const params = new URLSearchParams({ limit })
 
     Object.entries(filters).forEach(([key, value]) => {
       if (value) params.set(key, value)
     })
+
+    return params
+  }
+
+  useEffect(() => {
+    const params = getObservabilityParams()
 
     apiGet(`/api/observability?${params.toString()}`)
       .then(setObservability)
       .catch(() => {})
   }, [events, filters])
 
+  async function downloadLogs() {
+    const params = getObservabilityParams('1000')
+    const blob = await apiDownload(`/api/observability/download?${params.toString()}`)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `spectra-logs-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Stack spacing={2}>
         <Typography variant="h6">Console</Typography>
 
-        <ObservabilityFilters filters={filters} onChange={setFilters} />
+        <ObservabilityFilters filters={filters} onChange={setFilters} onDownload={downloadLogs} />
         <ObservabilityPanel data={observability} type={filters.type} />
 
         <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>

@@ -106,3 +106,17 @@ export async function apiDelete(path) {
 
   return response.json()
 }
+
+export async function apiDownload(path) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    headers: {
+      ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`GET ${path} failed`)
+  }
+
+  return response.blob()
+}

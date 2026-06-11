@@ -8,6 +8,7 @@ import {
   Stack,
   TextField
 } from '@mui/material'
+import DownloadIcon from '@mui/icons-material/Download'
 
 export const emptyObservabilityFilters = {
   type: 'all',
@@ -17,7 +18,7 @@ export const emptyObservabilityFilters = {
   user: ''
 }
 
-export function ObservabilityFilters({ filters, onChange }) {
+export function ObservabilityFilters({ filters, onChange, onDownload }) {
   function updateFilter(name, value) {
     onChange({
       ...filters,
@@ -79,6 +80,14 @@ export function ObservabilityFilters({ filters, onChange }) {
           sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}
         >
           Reset
+        </Button>
+        <Button
+          startIcon={<DownloadIcon />}
+          variant="contained"
+          onClick={onDownload}
+          sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}
+        >
+          Download
         </Button>
       </Stack>
     </Paper>

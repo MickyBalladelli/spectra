@@ -141,6 +141,46 @@ export async function getObservabilityLogs({ userId, limit = 50, filters = {} })
   }
 }
 
+function escapeCsv(value) {
+  const text = value === undefined || value === null ? '' : String(value)
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+export async function exportObservabilityLogs({ userId, limit = 1000, filters = {} }) {
+  const logs = await getObservabilityLogs({ userId, limit, filters })
+  const rows = [
+    ...logs.requests,
+    ...logs.jobs,
+    ...logs.workers,
+    ...logs.errors
+  ].sort((left, right) => new Date(right.at).getTime() - new Date(left.at).getTime())
+
+  const headers = [
+    'at',
+    'type',
+    'userId',
+    'source',
+    'method',
+    'path',
+    'status',
+    'latencyMs',
+    'jobId',
+    'workerId',
+    'title',
+    'event',
+    'stage',
+    'percent',
+    'message',
+    'error',
+    'detail'
+  ]
+
+  return [
+    headers.join(','),
+    ...rows.map(row => headers.map(header => escapeCsv(row[header])).join(','))
+  ].join('\n')
+}
+
 export function sanitizeObservabilityFilters({ viewerUserId, query }) {
   const requestedUser = String(query.user || '').trim()
   const user = requestedUser
