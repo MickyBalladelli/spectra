@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } fr
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
+import { BatchIngestFileList } from './BatchIngestFileList.jsx'
 
 function getJobDetail(job) {
   if (job.status === 'failed') {
@@ -21,6 +22,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeJobId, setActiveJobId] = useState('')
 
   async function refreshJobs() {
     if (!canIngest) return
@@ -78,6 +80,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
       const result = files.length > 0
         ? await apiUploadFiles('/api/ingestions/files', files, { source: 'dashboard' })
         : await apiPost('/api/ingestions', { title, sourceType, text, metadata: { source: 'dashboard' } })
+      setActiveJobId(result.job.id)
       setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
       setProgress({
         percent: result.job.percent || 0,
@@ -88,6 +91,23 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
       setProgress({ percent: 0, message: 'Ingestion failed' })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function retryFailedFile(jobId, fileIndex) {
+    if (!canIngest) return
+
+    setError('')
+    try {
+      const result = await apiPost(`/api/ingestions/jobs/${jobId}/retry`, { fileIndex })
+      setActiveJobId(result.job.id)
+      setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
+      setProgress({
+        percent: result.job.percent || 0,
+        message: result.job.message || 'Retry queued'
+      })
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -156,6 +176,11 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           onTextChange={setText}
           onSourceTypeChange={setSourceType}
           onFilesChange={setFiles}
+        />
+        <BatchIngestFileList
+          files={files}
+          jobs={jobs.filter(job => job.id === activeJobId)}
+          onRetry={retryFailedFile}
         />
         {jobs.length > 0 && (
           <Paper variant="outlined" sx={{ overflow: 'hidden' }}>

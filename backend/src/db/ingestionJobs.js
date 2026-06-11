@@ -49,11 +49,23 @@ function summarizeResult(result) {
   const documents = Array.isArray(result.documents) ? result.documents : [result.document].filter(Boolean)
   const chunks = Array.isArray(result.chunks) ? result.chunks : []
   const vectorKeys = Array.isArray(result.vectorKeys) ? result.vectorKeys : []
+  const files = Array.isArray(result.files)
+    ? result.files
+    : documents.map((entry, index) => ({
+      index,
+      fileName: entry.fileName || entry.document?.title || `Document ${index + 1}`,
+      status: entry.failed ? 'failed' : entry.duplicate ? 'duplicate' : 'completed',
+      error: entry.error || null,
+      documentId: entry.document?.id || null,
+      chunkCount: Array.isArray(entry.chunks) ? entry.chunks.length : 0,
+      vectorCount: Array.isArray(entry.vectorKeys) ? entry.vectorKeys.length : 0
+    }))
 
   return {
-    documentCount: documents.length,
+    documentCount: documents.filter(document => !document.failed).length,
     chunkCount: chunks.length,
-    vectorCount: vectorKeys.length
+    vectorCount: vectorKeys.length,
+    files
   }
 }
 

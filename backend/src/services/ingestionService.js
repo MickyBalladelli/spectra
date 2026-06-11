@@ -33,6 +33,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
 
     return {
       duplicate: true,
+      fileName: metadata.sourceFileName || title,
       document: existingDocument,
       chunks: [],
       vectorKeys: []
@@ -67,6 +68,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
   await emitProgress({ stage: 'completed', percent: 100, message: 'Document indexed' })
 
   return {
+    fileName: metadata.sourceFileName || title,
     document,
     chunks: persistedChunks,
     vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey)
@@ -88,6 +90,31 @@ export async function ingestDocument(payload, emitProgress = () => {}) {
     let allVectorKeys = []
 
     for (const [index, pendingDocument] of payload.documents.entries()) {
+      if (pendingDocument.fileError) {
+        const failedResult = {
+          failed: true,
+          fileName: pendingDocument.fileName || pendingDocument.title,
+          error: pendingDocument.fileError,
+          chunks: [],
+          vectorKeys: []
+        }
+
+        await emitProgress({
+          documentIndex: index,
+          documentsTotal: payload.documents.length,
+          documentPercent: 100,
+          percent: Math.round(((index + 1) / payload.documents.length) * 100),
+          stage: 'failed',
+          message: pendingDocument.fileError,
+          fileName: failedResult.fileName,
+          fileStatus: 'failed',
+          error: pendingDocument.fileError
+        })
+
+        documentResults.push(failedResult)
+        continue
+      }
+
       // Merge batch-level and document-level metadata
       const documentPayload = {
         ...pendingDocument,
@@ -98,23 +125,54 @@ export async function ingestDocument(payload, emitProgress = () => {}) {
         }
       }
 
-      // Process each document with progress tracking
-      const result = await ingestSingleDocument(documentPayload, async progress => {
-        const documentPercent = progress.percent || 0
-        const percent = Math.round(((index + (documentPercent / 100)) / payload.documents.length) * 100)
+      try {
+        // Process each document with progress tracking
+        const result = await ingestSingleDocument(documentPayload, async progress => {
+          const documentPercent = progress.percent || 0
+          const percent = Math.round(((index + (documentPercent / 100)) / payload.documents.length) * 100)
+          const fileStatus = progress.stage === 'duplicate'
+            ? 'duplicate'
+            : progress.stage === 'completed'
+              ? 'completed'
+              : 'running'
+
+          await emitProgress({
+            documentIndex: index,
+            documentsTotal: payload.documents.length,
+            ...progress,
+            fileName: pendingDocument.fileName || pendingDocument.title,
+            fileStatus,
+            documentPercent,
+            percent
+          })
+        })
+
+        documentResults.push(result)
+        allChunks = allChunks.concat(result.chunks || [])
+        allVectorKeys = allVectorKeys.concat(result.vectorKeys || [])
+      } catch (error) {
+        const failedResult = {
+          failed: true,
+          fileName: pendingDocument.fileName || pendingDocument.title,
+          error: error.message,
+          chunks: [],
+          vectorKeys: []
+        }
 
         await emitProgress({
           documentIndex: index,
           documentsTotal: payload.documents.length,
-          ...progress,
-          documentPercent,
-          percent
+          documentPercent: 100,
+          percent: Math.round(((index + 1) / payload.documents.length) * 100),
+          stage: 'failed',
+          message: error.message,
+          fileName: failedResult.fileName,
+          fileStatus: 'failed',
+          error: error.message
         })
-      })
 
-      documentResults.push(result)
-      allChunks = allChunks.concat(result.chunks || [])
-      allVectorKeys = allVectorKeys.concat(result.vectorKeys || [])
+        documentResults.push(failedResult)
+      }
     }
 
     // Return aggregated results for batch processing

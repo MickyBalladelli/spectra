@@ -1,7 +1,7 @@
 import express from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
-import { createIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
+import { createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { deleteDocument } from '../db/documents.js'
@@ -75,6 +75,62 @@ ingestionRoutes.get('/jobs', requireAuth, async (request, response, next) => {
     })
 
     response.json(jobs.map(toPublicIngestionJob))
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.post('/jobs/:jobId/retry', requireAuth, async (request, response, next) => {
+  try {
+    const userId = getUserIdFromRequest(request)
+    const fileIndex = Number(request.body.fileIndex)
+    const sourceJob = await getIngestionJob({
+      userId,
+      jobId: request.params.jobId
+    })
+
+    if (!sourceJob) {
+      return response.status(404).json({ error: 'Ingestion job not found' })
+    }
+
+    if (!Number.isInteger(fileIndex) || fileIndex < 0) {
+      return response.status(400).json({ error: 'Invalid file index' })
+    }
+
+    let payload
+    let title
+
+    if (Array.isArray(sourceJob.payload.uploads)) {
+      const upload = sourceJob.payload.uploads[fileIndex]
+      if (!upload) return response.status(404).json({ error: 'File not found in job' })
+      payload = {
+        ...sourceJob.payload,
+        uploads: [upload]
+      }
+      title = upload.originalName
+    } else if (Array.isArray(sourceJob.payload.documents)) {
+      const document = sourceJob.payload.documents[fileIndex]
+      if (!document) return response.status(404).json({ error: 'Document not found in job' })
+      payload = {
+        ...sourceJob.payload,
+        documents: [document]
+      }
+      title = document.title
+    } else if (fileIndex === 0) {
+      payload = sourceJob.payload
+      title = sourceJob.title
+    } else {
+      return response.status(404).json({ error: 'File not found in job' })
+    }
+
+    const job = await createIngestionJob({
+      userId,
+      title: `Retry ${title}`,
+      documentsTotal: 1,
+      payload
+    })
+
+    return response.status(202).json({ job: toPublicIngestionJob(job) })
   } catch (error) {
     next(error)
   }

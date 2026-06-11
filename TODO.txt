@@ -1,15 +1,5 @@
 Here is strong improvement list, in good order:
 
-Better batch ingest UX
-  Per-file progress
-  Per-file success/failure
-  Retry failed file
-  Skip duplicate file clearly
-Document detail page
-  Show metadata
-  Show chunks
-  Show vector keys
-  Show search hits inside document
 Observability
   Request logs
   Job logs

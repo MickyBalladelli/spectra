@@ -219,7 +219,32 @@ export async function uploadedFilesToPayload({ request, uploadId, baseMetadata =
 export async function uploadedFilesPayloadToDocuments(payload) {
   if (!Array.isArray(payload.uploads)) return payload
 
-  const documents = await Promise.all(payload.uploads.map(fileToDocument))
+  const documents = []
+
+  for (const [index, upload] of payload.uploads.entries()) {
+    try {
+      const document = await fileToDocument(upload)
+      documents.push({
+        ...document,
+        fileIndex: index,
+        fileName: upload.originalName
+      })
+    } catch (error) {
+      documents.push({
+        title: upload.originalName,
+        sourceType: 'file',
+        text: '',
+        fileIndex: index,
+        fileName: upload.originalName,
+        fileError: error.message,
+        metadata: {
+          sourceFileName: upload.originalName,
+          mimeType: upload.mimeType,
+          byteSize: upload.byteSize
+        }
+      })
+    }
+  }
 
   return {
     ...payload,
