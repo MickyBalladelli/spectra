@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Box, Button, FormControlLabel, Grid, Paper, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import { HighlightedText } from './HighlightedText.jsx'
 
 const filterExamples = [
   {
@@ -166,7 +167,9 @@ export function SearchView({ socket }) {
                     <Typography variant="subtitle2">{result.title}</Typography>
                     <Typography variant="subtitle2" color="success.main">{result.score}</Typography>
                   </Stack>
-                  <Typography color="text.secondary">{result.content}</Typography>
+                  <Typography color="text.secondary">
+                    <HighlightedText text={result.content} query={query} />
+                  </Typography>
                 </Stack>
               </Paper>
             ))
