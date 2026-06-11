@@ -1,11 +1,16 @@
 import { getUserId } from '../userSession.js'
 import { getAuthToken } from '../userSession.js'
 
-// Use process.env for Jest compatibility, fall back to import.meta.env for Vite
-const apiUrl =
-  typeof process !== 'undefined' && process.env?.VITE_API_URL
-    ? process.env.VITE_API_URL
-    : (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) || 'http://localhost:4000'
+function getApiUrl() {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) return import.meta.env.VITE_API_URL
+  if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) return window.importMetaEnv.VITE_API_URL
+  if (typeof process !== 'undefined' && process.env?.VITE_API_URL) return process.env.VITE_API_URL
+  if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:4000`
+
+  return 'http://localhost:4000'
+}
+
+const apiUrl = getApiUrl()
 
 export async function apiGet(path) {
   const response = await fetch(`${apiUrl}${path}`, {
@@ -23,18 +28,25 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, body) {
-  const response = await fetch(`${apiUrl}${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Spectra-User': getUserId(),
-      ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
-    },
-    body: JSON.stringify(body)
-  })
+  let response
+
+  try {
+    response = await fetch(`${apiUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Spectra-User': getUserId(),
+        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {})
+      },
+      body: JSON.stringify(body)
+    })
+  } catch {
+    throw new Error(`Cannot reach API at ${apiUrl}`)
+  }
 
   if (!response.ok) {
-    throw new Error(`POST ${path} failed`)
+    const errorBody = await response.json().catch(() => ({}))
+    throw new Error(errorBody.error || errorBody.details || `POST ${path} failed`)
   }
 
   return response.json()

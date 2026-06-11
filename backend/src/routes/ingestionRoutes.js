@@ -5,12 +5,20 @@ import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { deleteDocument } from '../db/documents.js'
 
-const ingestSchema = z.object({
+const documentSchema = z.object({
   title: z.string().min(1),
   sourceType: z.string().optional(),
   text: z.string().min(1),
   metadata: z.record(z.unknown()).optional()
 })
+
+const ingestSchema = z.union([
+  documentSchema,
+  z.object({
+    documents: z.array(documentSchema).min(1),
+    metadata: z.record(z.unknown()).optional()
+  })
+])
 
 export const ingestionRoutes = express.Router()
 

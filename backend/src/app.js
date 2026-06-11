@@ -15,7 +15,7 @@ export function createApp(getIo = () => null) {
   logger.info('Starting Spectra backend application')
 
   app.use(cors({ origin: env.frontendOrigins }))
-  app.use(express.json({ limit: '2mb' }))
+  app.use(express.json({ limit: '100mb' }))
   app.use((request, response, next) => {
     request.io = getIo()
     next()

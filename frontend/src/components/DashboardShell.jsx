@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, Suspense, lazy } from 'react'
+import { useCallback, useEffect, useState, Suspense } from 'react'
 import {
   Box,
   Button,
+  Chip,
   Container,
   Divider,
   IconButton,
@@ -21,7 +22,7 @@ import { apiGet } from '../api/client.js'
 import { useSpectraSocket } from '../hooks/useSpectraSocket.js'
 import AuthDialog from './LoginDialog.jsx'
 import { getAuthToken, clearAuth } from '../userSession.js'
-import { RealtimeRail } from './RealtimeRail.jsx'
+import { ConsolePanel } from './ConsolePanel.jsx'
 import { ClusterOverview } from './ClusterOverview.jsx'
 import { DataExplorer } from './DataExplorer.jsx'
 import { IngestionPanel } from './IngestionPanel.jsx'
@@ -36,6 +37,7 @@ export function DashboardShell({ mode, onToggleMode }) {
   const [chunks, setChunks] = useState([])
   const [documents, setDocuments] = useState([])
   const { socket, status, events } = useSpectraSocket()
+  const authToken = getAuthToken()
 
   const loadData = useCallback(async () => {
     const [nextStats, nextChunks, nextDocuments] = await Promise.all([
@@ -73,7 +75,12 @@ export function DashboardShell({ mode, onToggleMode }) {
         <Typography variant="h6" sx={{ flex: 1 }}>
           Spectra
         </Typography>
-        {getAuthToken() ? (
+        <Chip
+          size="small"
+          label={status}
+          color={status === 'connected' ? 'success' : 'default'}
+        />
+        {authToken ? (
           <Button onClick={() => {
             clearAuth()
             location.reload()
@@ -102,67 +109,63 @@ export function DashboardShell({ mode, onToggleMode }) {
       </Toolbar>
 
       <Container component="main" id="main-content" maxWidth="xl" sx={{ py: 3 }}>
-        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="stretch">
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack spacing={3}>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h4">Vector control room</Typography>
-                  <Typography color="text.secondary">
-                    turbovec index, metadata, sockets
-                  </Typography>
-                </Box>
-                  <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">
-                    Ingest
-                  </Button>
-                  <Button startIcon={<SearchIcon />} variant="outlined" onClick={() => setTab('search')} aria-label="Open search panel">
-                    Query
-                  </Button>
-              </Stack>
+        <Stack spacing={3}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h4">Vector control room</Typography>
+              <Typography color="text.secondary">
+                turbovec index, metadata, sockets
+              </Typography>
+            </Box>
+            <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">
+              Ingest
+            </Button>
+            <Button startIcon={<SearchIcon />} variant="outlined" onClick={() => setTab('search')} aria-label="Open search panel">
+              Query
+            </Button>
+          </Stack>
 
-                <Tabs
-                  value={tab}
-                  onChange={(event, value) => setTab(value)}
-                  aria-label="Main navigation tabs"
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  allowScrollButtonsMobile
-                >
-                  <Tab value="overview" label="Overview" />
-                  <Tab value="ingest" label="Ingest" />
-                  <Tab value="documents" label="Documents" />
-                  <Tab value="explorer" label="Explorer" />
-                  <Tab value="search" label="Search" />
-                </Tabs>
-                <Divider />
+          <Tabs
+            value={tab}
+            onChange={(event, value) => setTab(value)}
+            aria-label="Main navigation tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+          >
+            <Tab value="overview" label="Overview" />
+            <Tab value="ingest" label="Ingest" />
+            <Tab value="documents" label="Documents" />
+            <Tab value="explorer" label="Explorer" />
+            <Tab value="search" label="Search" />
+            <Tab value="console" label="Console" />
+          </Tabs>
+          <Divider />
 
-                <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
-                  <Box hidden={tab !== 'overview'}>
-                    {stats && 
-                      <ClusterOverview
-                        stats={stats}
-                      />
-                    }
-                  </Box>
-                  <Box hidden={tab !== 'ingest'}>
-                    <IngestionPanel socket={socket} />
-                  </Box>
-                  <Box hidden={tab !== 'documents'}>
-                    <DocumentList documents={documents} onDocumentRemoved={loadData} />
-                  </Box>
-                  <Box hidden={tab !== 'explorer'}>
-                    <DataExplorer chunks={chunks} />
-                  </Box>
-                  <Box hidden={tab !== 'search'}>
-                    <SearchView socket={socket} />
-                  </Box>
-                </Suspense>
-            </Stack>
-          </Box>
-
-          <Box sx={{ display: { xs: 'none', lg: 'block' }, width: { lg: 320 } }}>
-            <RealtimeRail status={status} events={events} />
-          </Box>
+          <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>}>
+            <Box hidden={tab !== 'overview'}>
+              {stats &&
+                <ClusterOverview
+                  stats={stats}
+                />
+              }
+            </Box>
+            <Box hidden={tab !== 'ingest'}>
+              <IngestionPanel socket={socket} canIngest={Boolean(authToken)} />
+            </Box>
+            <Box hidden={tab !== 'documents'}>
+              <DocumentList documents={documents} onDocumentRemoved={loadData} />
+            </Box>
+            <Box hidden={tab !== 'explorer'}>
+              <DataExplorer chunks={chunks} />
+            </Box>
+            <Box hidden={tab !== 'search'}>
+              <SearchView socket={socket} />
+            </Box>
+            <Box hidden={tab !== 'console'}>
+              <ConsolePanel status={status} events={events} />
+            </Box>
+          </Suspense>
         </Stack>
       </Container>
       <AuthDialog

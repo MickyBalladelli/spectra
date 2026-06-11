@@ -17,6 +17,14 @@ const endpointMap = {
   register: '/api/auth/register'
 }
 
+function getApiUrl() {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) return import.meta.env.VITE_API_URL
+  if (typeof window !== 'undefined' && window.importMetaEnv?.VITE_API_URL) return window.importMetaEnv.VITE_API_URL
+  if (typeof process !== 'undefined' && process.env?.VITE_API_URL) return process.env.VITE_API_URL
+
+  return 'http://localhost:4000'
+}
+
 export function AuthDialog({ open, mode, onClose }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -44,7 +52,7 @@ export function AuthDialog({ open, mode, onClose }) {
     setError(null)
 
     try {
-      const apiUrl = window.importMetaEnv?.VITE_API_URL || process.env?.VITE_API_URL || 'http://localhost:4000';
+      const apiUrl = getApiUrl()
       const res = await fetch(`${apiUrl}${endpointMap[mode]}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

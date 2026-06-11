@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { apiPost } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 
-export function IngestionPanel({ socket }) {
+export function IngestionPanel({ socket, canIngest }) {
   const [title, setTitle] = useState('Demo document')
   const [text, setText] = useState('Spectra indexes dense vectors and keeps document metadata in PostgreSQL.')
   const [documents, setDocuments] = useState([])
@@ -32,7 +33,12 @@ export function IngestionPanel({ socket }) {
     }
   }, [socket])
 
-  function startIngestion() {
+  async function startIngestion() {
+    if (!canIngest) {
+      setError('Sign in to ingest documents')
+      return
+    }
+
     setError('')
     setProgress({ percent: 5, message: documents.length > 0 ? `Queued ${documents.length} documents` : 'Queued' })
 
@@ -40,33 +46,27 @@ export function IngestionPanel({ socket }) {
       ? { documents, metadata: { source: 'dashboard' } }
       : { title, sourceType, text, metadata: { source: 'dashboard' } }
 
-    socket.emit('ingestion:start', payload)
+    try {
+      await apiPost('/api/ingestions', payload)
+    } catch (err) {
+      setError(err.message)
+      setProgress({ percent: 0, message: 'Ingestion failed' })
+    }
   }
 
   const ingestActive = progress.percent > 0 && progress.percent < 100
   const hasQueuedDocuments = documents.length > 0
-  const canStart = hasQueuedDocuments || text.trim() !== ''
+  const canStart = canIngest && (hasQueuedDocuments || text.trim() !== '')
 
   return (
     <Paper sx={{ p: 2 }}>
       <Stack spacing={2}>
         <Typography variant="h6">Document ingestion</Typography>
-        <DocumentInputZone
-          title={title}
-          text={text}
-          onTitleChange={setTitle}
-          onTextChange={setText}
-          onSourceTypeChange={setSourceType}
-          onDocumentsChange={setDocuments}
-        />
-        <LinearProgress
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress.percent}
-          variant="determinate"
-          value={progress.percent}
-        />
+        {!canIngest && (
+          <Typography color="text.secondary">
+            Sign in to ingest documents
+          </Typography>
+        )}
         <Stack direction="row" spacing={2} alignItems="center">
           <Button
             startIcon={<UploadFileIcon />}
@@ -75,10 +75,26 @@ export function IngestionPanel({ socket }) {
             disabled={ingestActive || !canStart}
             aria-label="Start document ingestion"
           >
-            {ingestActive ? 'Ingesting…' : 'Start ingestion'}
+            {ingestActive ? 'Ingesting...' : 'Start ingesting'}
           </Button>
           <Typography color="text.secondary">{progress.message}</Typography>
         </Stack>
+        <LinearProgress
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress.percent}
+          variant="determinate"
+          value={progress.percent}
+        />
+        <DocumentInputZone
+          title={title}
+          text={text}
+          onTitleChange={setTitle}
+          onTextChange={setText}
+          onSourceTypeChange={setSourceType}
+          onDocumentsChange={setDocuments}
+        />
         {error && (
           <Typography color="error" sx={{ mt: 1 }}>
             {error}
