@@ -41,7 +41,7 @@ export function DashboardShell({ mode, onToggleMode }) {
   const loadData = useCallback(async () => {
     const [nextStats, nextChunks, nextDocuments] = await Promise.all([
       apiGet('/api/indexes/stats'),
-      apiGet('/api/indexes/chunks'),
+      apiGet('/api/indexes/chunks?limit=1000'),
       apiGet('/api/indexes/documents')
     ])
     setStats(nextStats)

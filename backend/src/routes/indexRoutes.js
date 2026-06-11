@@ -14,9 +14,11 @@ indexRoutes.get('/stats', async (request, response, next) => {
 
 indexRoutes.get('/chunks', async (request, response, next) => {
   try {
+    const limit = Math.min(Number(request.query.limit || 200), 1000)
+
     response.json(await listChunks({
       userId: getUserIdFromRequest(request),
-      limit: Number(request.query.limit || 50)
+      limit
     }))
   } catch (error) {
     next(error)

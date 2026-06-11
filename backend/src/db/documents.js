@@ -206,7 +206,7 @@ export async function getClusterStats({ userId }) {
  * @property {number} return.tokenCount - The number of tokens in the chunk
  * @property {Date} return.createdAt - The creation timestamp
  */
-export async function listChunks({ userId, limit = 50 }) {
+export async function listChunks({ userId, limit = 200 }) {
   const result = await withClient(client => client.query(
     `select dc.id, dc.document_id as "documentId", d.title, dc.chunk_index as "chunkIndex",
       dc.vector_key as "vectorKey", dc.content, dc.token_count as "tokenCount", dc.created_at as "createdAt"

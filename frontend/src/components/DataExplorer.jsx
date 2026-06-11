@@ -10,6 +10,8 @@ import {
 } from '@mui/material'
 
 export function DataExplorer({ chunks }) {
+  const documentCount = new Set((chunks || []).map(chunk => chunk.documentId)).size
+
   if (!chunks || chunks.length === 0) {
     return (
       <Paper sx={{ p: 3 }}>
@@ -19,7 +21,13 @@ export function DataExplorer({ chunks }) {
   }
 
   return (
-    <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+    <TableContainer component={Paper} sx={{ overflowX: 'auto', border: 1, borderColor: 'divider' }}>
+      <Typography variant="h6" sx={{ p: 2, pb: 0 }}>
+        Explorer
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ px: 2, pb: 2 }}>
+        {chunks.length} chunks from {documentCount} documents
+      </Typography>
       <Table size="small">
         <TableHead>
           <TableRow>
