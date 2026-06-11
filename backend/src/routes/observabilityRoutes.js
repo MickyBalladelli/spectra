@@ -13,7 +13,10 @@ observabilityRoutes.get('/', async (request, response, next) => {
     const userId = getUserIdFromRequest(request)
 
     response.json({
-      ...getObservabilityLogs({ userId }),
+      ...await getObservabilityLogs({
+        userId,
+        limit: Math.min(Number(request.query.limit || 50), 100)
+      }),
       searchLatency: await listQueryLatency({
         userId,
         limit: Math.min(Number(request.query.limit || 50), 100)

@@ -2,7 +2,7 @@ import http from 'http'
 import { Server } from 'socket.io'
 import { createApp } from './app.js'
 import { env, isAllowedFrontendOrigin } from './config/env.js'
-import { pool, withClient } from './db/pool.js'
+import { logPool, pool, withClient, withLogClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
 import { startIngestionJobEvents } from './services/ingestionJobEvents.js'
 import { startIngestionWorkerLoop } from './services/ingestionWorkerLoop.js'
@@ -20,6 +20,32 @@ io = new Server(server, {
     methods: ['GET', 'POST']
   }
 })
+
+async function ensureObservabilitySchema() {
+  await withLogClient(async client => {
+    await client.query(`
+      create table if not exists observability_logs (
+        id bigserial primary key,
+        type text not null,
+        user_id text,
+        source text,
+        message text,
+        detail text,
+        method text,
+        path text,
+        status integer,
+        latency_ms integer,
+        job_id uuid,
+        worker_id text,
+        metadata jsonb not null default '{}',
+        created_at timestamptz not null default now()
+      )
+    `)
+    await client.query(`create index if not exists observability_logs_type_created_idx on observability_logs(type, created_at desc)`)
+    await client.query(`create index if not exists observability_logs_user_created_idx on observability_logs(user_id, created_at desc)`)
+    await client.query(`create index if not exists observability_logs_job_id_idx on observability_logs(job_id)`)
+  })
+}
 
 async function ensureDatabaseSchema() {
   try {
@@ -136,6 +162,7 @@ async function ensureDatabaseSchema() {
       await client.query(`create index if not exists collection_documents_document_id_idx on collection_documents(document_id)`)
       await client.query(`create index if not exists collection_shares_user_id_idx on collection_shares(user_id)`)
     })
+    await ensureObservabilitySchema()
   } catch (error) {
     console.warn('Skipping database schema migration:', error.message)
   }
@@ -165,6 +192,9 @@ async function shutdown(signal) {
   io.close()
   server.close(async () => {
     await pool.end()
+    if (logPool !== pool) {
+      await logPool.end()
+    }
     process.exit(0)
   })
 }

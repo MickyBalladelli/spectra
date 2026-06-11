@@ -44,6 +44,11 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 3. Create database and tables with `npm run db:setup`
 4. Run app with `npm run dev`
 
+## Environment
+
+- `DATABASE_URL`: main app database for users, documents, chunks, vectors, jobs, collections, and search audit.
+- `LOG_DATABASE_URL`: optional observability database for request, job, worker, and error logs. Defaults to `DATABASE_URL` when empty.
+
 ## Maintenance
 
 - Rebuild vectors from PostgreSQL chunks with `npm run vectors:rebuild -w backend`

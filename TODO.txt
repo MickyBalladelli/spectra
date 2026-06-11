@@ -1,20 +1,21 @@
-Here is strong improvement list, in good order:
 
-Observability
-  Request logs
-  Job logs
-  Worker logs
-  Search latency charts
-  Error history in Console
-Import/export
-  Export documents metadata
-  Export chunks
-  Import existing folder or ZIP
-Testing
-  Unit tests for chunking, hashing, query ranking
-  API tests for auth and ingest jobs
-  UI tests for ingest/search flows
-Deployment
-  Docker Compose for app + Postgres + vector store
-  Production env examples
-  Backup/restore docs
+Add log filters: type, status, date, user
+Add downloadable logs
+Add admin-only observability view
+Add job cancel button
+Add pause/resume ingestion worker
+Add ingestion queue position
+Add per-file estimated time
+Add document re-ingest button
+Add duplicate policy: skip / replace / version
+Add collection permissions roles: viewer/editor
+Add search explain view: keyword score, vector score, filters
+Add search feedback: good/bad result
+Add saved searches
+Add chunk editor or chunk inspector improvements
+Add OCR for scanned PDFs
+Add file type preview before ingest
+Add background cleanup for uploaded temp files
+Add DB migrations instead of auto schema edits
+Add tests for ownership and ingestion failures
+Add code splitting to reduce frontend bundle size

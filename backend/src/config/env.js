@@ -27,6 +27,7 @@ export function isAllowedFrontendOrigin(origin) {
 export const env = {
   port: Number(process.env.PORT || 4000),
   databaseUrl: process.env.DATABASE_URL || 'postgres://spectra:spectra@localhost:5432/spectra',
+  logDatabaseUrl: process.env.LOG_DATABASE_URL || process.env.DATABASE_URL || 'postgres://spectra:spectra@localhost:5432/spectra',
   frontendOrigins,
   jwtSecret: process.env.JWT_SECRET || 'spectra-dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
