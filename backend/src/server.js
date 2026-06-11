@@ -5,9 +5,11 @@ import { env, isAllowedFrontendOrigin } from './config/env.js'
 import { pool, withClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
 import { startIngestionJobEvents } from './services/ingestionJobEvents.js'
+import { startIngestionWorkerLoop } from './services/ingestionWorkerLoop.js'
 
 let io
 let stopIngestionJobEvents = async () => {}
+let stopIngestionWorker = () => {}
 const app = createApp(() => io)
 const server = http.createServer(app)
 io = new Server(server, {
@@ -96,6 +98,7 @@ registerSockets(io)
 async function startServer() {
   await ensureDatabaseSchema()
   stopIngestionJobEvents = await startIngestionJobEvents(io)
+  stopIngestionWorker = startIngestionWorkerLoop('server')
 
   server.listen(env.port, () => {
     console.log(`Spectra backend listening on ${env.port}`)
@@ -109,6 +112,7 @@ startServer().catch(error => {
 
 async function shutdown(signal) {
   console.log(`${signal} received, closing Spectra backend`)
+  stopIngestionWorker()
   await stopIngestionJobEvents()
   io.close()
   server.close(async () => {

@@ -8,7 +8,7 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev:backend & npm run dev:worker & npm run dev:frontend",
+    "dev": "npm run dev:backend & npm run dev:frontend",
     "dev:frontend": "npm run dev -w frontend",
     "dev:backend": "npm run dev -w backend",
     "dev:worker": "npm run dev:worker -w backend",

@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon --watch src src/server.js",
+    "dev": "nodemon --watch src src/server.js & nodemon --watch src src/workers/ingestionWorker.js",
     "dev:worker": "nodemon --watch src src/workers/ingestionWorker.js",
     "db:setup": "node scripts/setupDatabase.js",
     "vectors:rebuild": "node scripts/rebuildVectorStore.js",

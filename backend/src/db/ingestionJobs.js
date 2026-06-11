@@ -36,6 +36,13 @@ const jobColumns = `id, user_id as "userId", status, title,
   created_at as "createdAt", started_at as "startedAt",
   completed_at as "completedAt", updated_at as "updatedAt"`
 
+const claimedJobColumns = `job.id, job.user_id as "userId", job.status, job.title,
+  job.documents_total as "documentsTotal", job.documents_completed as "documentsCompleted",
+  job.stage, job.percent, job.message, job.error, job.payload, job.result,
+  job.worker_id as "workerId", job.locked_at as "lockedAt", job.attempts,
+  job.created_at as "createdAt", job.started_at as "startedAt",
+  job.completed_at as "completedAt", job.updated_at as "updatedAt"`
+
 function summarizeResult(result) {
   if (!result) return null
 
@@ -154,7 +161,7 @@ export async function claimNextIngestionJob({ workerId }) {
            attempts = attempts + 1
          from next_job
          where job.id = next_job.id
-         returning ${jobColumns}`,
+         returning ${claimedJobColumns}`,
         [workerId]
       )
 

@@ -1,5 +1,6 @@
 import { updateIngestionJob } from '../db/ingestionJobs.js'
 import { ingestDocument } from './ingestionService.js'
+import { uploadedFilesPayloadToDocuments } from './uploadParser.js'
 
 function getDocumentsCompleted(progress) {
   if (progress.documentIndex === undefined) {
@@ -13,7 +14,8 @@ export async function runIngestionJob(job) {
   const userId = job.userId
 
   try {
-    const result = await ingestDocument({ ...job.payload, userId }, async progress => {
+    const payload = await uploadedFilesPayloadToDocuments(job.payload)
+    const result = await ingestDocument({ ...payload, userId }, async progress => {
       await updateIngestionJob({
         jobId: job.id,
         userId,

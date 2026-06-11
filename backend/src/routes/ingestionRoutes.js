@@ -1,4 +1,5 @@
 import express from 'express'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { createIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
@@ -46,15 +47,20 @@ ingestionRoutes.post(
   async (request, response, next) => {
     try {
       const userId = getUserIdFromRequest(request)
+      const uploadId = randomUUID()
       const payload = await uploadedFilesToPayload({
         request,
+        uploadId,
         baseMetadata: { source: 'server-upload' }
       })
-      const documentsTotal = payload.documents.length
-      const title = documentsTotal === 1 ? payload.documents[0].title : `${documentsTotal} files`
+      const documentsTotal = payload.uploads.length
+      const title = documentsTotal === 1 ? payload.uploads[0].originalName : `${documentsTotal} files`
       const job = await createIngestionJob({ userId, title, documentsTotal, payload })
 
-      response.status(202).json({ job: toPublicIngestionJob(job) })
+      response.status(202).json({
+        job: toPublicIngestionJob(job),
+        uploaded: documentsTotal
+      })
     } catch (error) {
       next(error)
     }

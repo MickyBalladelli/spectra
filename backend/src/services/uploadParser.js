@@ -1,6 +1,14 @@
+import { createRequire } from 'module'
+import { mkdir, readFile, writeFile } from 'fs/promises'
+import { dirname, join } from 'path'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 
 const textExtensions = new Set(['.txt', '.md', '.markdown', '.json', '.csv'])
+const require = createRequire(import.meta.url)
+const pdfjsRoot = dirname(require.resolve('pdfjs-dist/package.json'))
+const standardFontDataUrl = `${join(pdfjsRoot, 'standard_fonts')}/`
+const cMapUrl = `${join(pdfjsRoot, 'cmaps')}/`
+const uploadRoot = join(process.cwd(), 'data', 'uploads')
 
 function badRequest(message) {
   const error = new Error(message)
@@ -117,8 +125,11 @@ export function parseMultipartBody(request) {
 async function readPdf(buffer) {
   const pdf = await getDocument({
     data: new Uint8Array(buffer),
+    cMapPacked: true,
+    cMapUrl,
     disableFontFace: true,
-    isEvalSupported: false
+    isEvalSupported: false,
+    standardFontDataUrl
   }).promise
   const pages = []
 
@@ -144,7 +155,8 @@ async function fileToDocument(file) {
     throw badRequest(`Unsupported file type: ${file.originalName}`)
   }
 
-  const text = isPdf ? await readPdf(file.buffer) : file.buffer.toString('utf8')
+  const buffer = file.buffer || await readFile(file.path)
+  const text = isPdf ? await readPdf(buffer) : buffer.toString('utf8')
   if (!text.trim()) {
     throw badRequest(`No text found in ${file.originalName}`)
   }
@@ -156,12 +168,16 @@ async function fileToDocument(file) {
     metadata: {
       sourceFileName: file.originalName,
       mimeType: file.mimeType,
-      byteSize: file.buffer.length
+      byteSize: file.byteSize || buffer.length
     }
   }
 }
 
-export async function uploadedFilesToPayload({ request, baseMetadata = {} }) {
+function sanitizeFilename(filename) {
+  return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+}
+
+export async function uploadedFilesToPayload({ request, uploadId, baseMetadata = {} }) {
   const { fields, files } = parseMultipartBody(request)
   let fieldMetadata = {}
 
@@ -175,13 +191,39 @@ export async function uploadedFilesToPayload({ request, baseMetadata = {} }) {
     throw badRequest('No files uploaded')
   }
 
-  const documents = await Promise.all(files.map(fileToDocument))
+  const uploadDir = join(uploadRoot, uploadId)
+  await mkdir(uploadDir, { recursive: true })
+  const uploads = []
+
+  for (const [index, file] of files.entries()) {
+    const filename = `${index}-${sanitizeFilename(file.originalName)}`
+    const path = join(uploadDir, filename)
+    await writeFile(path, file.buffer)
+    uploads.push({
+      path,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      byteSize: file.buffer.length
+    })
+  }
 
   return {
-    documents,
+    uploads,
     metadata: {
       ...baseMetadata,
       ...fieldMetadata
     }
+  }
+}
+
+export async function uploadedFilesPayloadToDocuments(payload) {
+  if (!Array.isArray(payload.uploads)) return payload
+
+  const documents = await Promise.all(payload.uploads.map(fileToDocument))
+
+  return {
+    ...payload,
+    uploads: undefined,
+    documents
   }
 }

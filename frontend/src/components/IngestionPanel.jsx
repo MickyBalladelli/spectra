@@ -12,6 +12,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [progress, setProgress] = useState({ percent: 0, message: 'Idle' })
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function refreshJobs() {
     if (!canIngest) return
@@ -59,6 +60,9 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
       return
     }
 
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
     setError('')
     setProgress({ percent: 5, message: files.length > 0 ? `Uploading ${files.length} files` : 'Queued' })
 
@@ -67,14 +71,18 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
         ? await apiUploadFiles('/api/ingestions/files', files, { source: 'dashboard' })
         : await apiPost('/api/ingestions', { title, sourceType, text, metadata: { source: 'dashboard' } })
       setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
-      setProgress({ percent: result.job.percent || 0, message: result.job.message || 'Queued' })
+      setProgress({
+        percent: result.job.percent || 0,
+        message: result.job.message || (files.length > 0 ? `Queued ${files.length} files for worker` : 'Queued for worker')
+      })
     } catch (err) {
       setError(err.message)
       setProgress({ percent: 0, message: 'Ingestion failed' })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const ingestActive = progress.percent > 0 && progress.percent < 100
   const hasFiles = files.length > 0
   const canStart = canIngest && (hasFiles || text.trim() !== '')
 
@@ -94,13 +102,13 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
             startIcon={<UploadFileIcon />}
             variant="contained"
             onClick={startIngestion}
-            disabled={ingestActive || !canStart}
+            disabled={isSubmitting || !canStart}
             aria-label="Start document ingestion"
           >
-            {ingestActive ? 'Ingesting...' : 'Start ingesting'}
+            {isSubmitting ? 'Uploading...' : 'Start ingesting'}
           </Button>
           <Typography color="text.secondary" sx={{ minWidth: { md: 180 } }}>
-            {progress.message}
+            {hasFiles ? `${files.length} files selected - ${progress.message}` : progress.message}
           </Typography>
         </Stack>
         {error && (
