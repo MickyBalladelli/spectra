@@ -15,8 +15,8 @@ import {
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import SearchIcon from '@mui/icons-material/Search'
-import StorageIcon from '@mui/icons-material/Storage'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
+import geminiLogo from '../../images/gemini-svg.svg'
 import { apiGet } from '../api/client.js'
 import { useSpectraSocket } from '../hooks/useSpectraSocket.js'
 import AuthDialog from './LoginDialog.jsx'
@@ -80,7 +80,12 @@ export function DashboardShell({ mode, onToggleMode }) {
           zIndex: theme => theme.zIndex.appBar
         }}
       >
-        <StorageIcon color="primary" />
+        <Box
+          component="img"
+          src={geminiLogo}
+          alt="Spectra"
+          sx={{ width: 34, height: 34, borderRadius: 1 }}
+        />
         <Typography variant="h6" sx={{ flex: 1 }}>
           Spectra
         </Typography>
