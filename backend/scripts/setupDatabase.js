@@ -21,6 +21,12 @@ function getAdminUrl(url) {
   return parsed.toString()
 }
 
+function getAdminTargetUrl(url) {
+  const parsed = new URL(adminUrl)
+  parsed.pathname = new URL(url).pathname
+  return parsed.toString()
+}
+
 function getDatabaseName(url) {
   const parsed = new URL(url)
   return parsed.pathname.replace('/', '')
@@ -78,6 +84,15 @@ async function createDatabase() {
 
 async function applySchema() {
   const schema = await fs.readFile(join(root, 'backend/db/schema.sql'), 'utf8')
+  const extensionClient = new pg.Client({ connectionString: getAdminTargetUrl(databaseUrl) })
+  await extensionClient.connect()
+
+  try {
+    await extensionClient.query(`create extension if not exists vector`)
+  } finally {
+    await extensionClient.end()
+  }
+
   const client = new pg.Client({ connectionString: databaseUrl })
   await client.connect()
 

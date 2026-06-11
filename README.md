@@ -8,7 +8,7 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 
 - Upload documents and make them searchable.
 - See ingestion progress in real time.
-- Keep document metadata in PostgreSQL while vectors live in the local vector store.
+- Keep document metadata and vector embeddings together in PostgreSQL with pgvector.
 - Search semantically, not only by exact keyword match.
 - Inspect documents, chunks, latency, vector counts, and socket events from one dashboard.
 - Work locally with a small stack that is easy to understand and extend.
@@ -22,21 +22,19 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 - Batch ingestion for multiple files
 - Real-time ingestion status with Socket.IO
 - Duplicate document detection by content hash
-- Chunking, embedding, and vector indexing pipeline
-- PostgreSQL document and chunk metadata storage
-- Local Python vector worker for upsert and search
+- Chunking, embedding, and pgvector indexing pipeline
+- PostgreSQL document, chunk, and embedding storage
 - Semantic search with optional metadata filters
 - Highlighted matching words in search results
 - Document list with delete actions
 - Cluster stats for documents, vectors, compression, and latency
 - Console view for socket and ingestion events
-- Vector store health check and rebuild command
+- pgvector health check and rebuild command
 
 ## Layout
 
 - `frontend`: Vite, React, Material UI dashboard
-- `backend`: Express, Socket.io, PostgreSQL pool, Node-to-vector worker bridge
-- `backend/workers`: local Python worker placeholder for vector ingestion and search
+- `backend`: Express, Socket.io, PostgreSQL pool, pgvector search
 
 ## Quick Setup
 

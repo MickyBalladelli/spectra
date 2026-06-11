@@ -28,8 +28,6 @@ export const env = {
   port: Number(process.env.PORT || 4000),
   databaseUrl: process.env.DATABASE_URL || 'postgres://spectra:spectra@localhost:5432/spectra',
   frontendOrigins,
-  vectorWorkerPath: process.env.VECTOR_WORKER_PATH || './workers/turbovec_worker.py'
-  ,
   jwtSecret: process.env.JWT_SECRET || 'spectra-dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d'
 }

@@ -16,4 +16,6 @@ coverage/
 *.tar.gz
 *.tgz
 backend/data/*.corrupt-*
+backend/data/vector_store.json
+backend/data/vector_store.json.lock
 .vscode/

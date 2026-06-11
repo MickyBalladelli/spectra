@@ -47,7 +47,7 @@ export function ClusterOverview({ stats }) {
               </Stack>
             </Paper>
           ) : (
-            <MetricCard label="Vectors" value={data.vectors} detail="turbovec keys" />
+            <MetricCard label="Vectors" value={data.vectors} detail="pgvector embeddings" />
           )}
         </Grid>
         <Grid item xs={12} md={3}>
@@ -60,7 +60,7 @@ export function ClusterOverview({ stats }) {
               </Stack>
             </Paper>
           ) : (
-            <MetricCard label="Compression" value={`${data.compression_factor}x`} detail="TurboQuant target" />
+            <MetricCard label="Compression" value={`${data.compression_factor}x`} detail="Embedding footprint" />
           )}
         </Grid>
         <Grid item xs={12} md={3}>

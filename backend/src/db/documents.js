@@ -1,6 +1,10 @@
 import { randomUUID, createHash } from 'crypto'
 import { withClient } from './pool.js'
 
+function toVectorLiteral(vector) {
+  return `[${vector.map(value => Number(value) || 0).join(',')}]`
+}
+
 /**
  * Finds a document by its content hash or body text.
  *
@@ -129,22 +133,23 @@ export async function createChunks({ userId, documentId, chunks }) {
   return withClient(async client => {
     const values = []
     const placeholders = chunks.map((chunk, index) => {
-      const offset = index * 7
+      const offset = index * 8
       values.push(
         userId,
         documentId,
         chunk.chunkIndex,
         chunk.vectorKey,
+        toVectorLiteral(chunk.vector || []),
         chunk.content,
         chunk.tokenCount,
         chunk.metadata
       )
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}::vector, $${offset + 6}, $${offset + 7}, $${offset + 8})`
     }).join(', ')
 
     const result = await client.query(
       `insert into document_chunks
-        (user_id, document_id, chunk_index, vector_key, content, token_count, metadata)
+        (user_id, document_id, chunk_index, vector_key, embedding, content, token_count, metadata)
        values ${placeholders}
        returning id, document_id as "documentId", chunk_index as "chunkIndex",
          vector_key as "vectorKey", content, token_count as "tokenCount", metadata`,
@@ -251,32 +256,19 @@ export async function listDocuments({ userId, limit = 50 }) {
   return result.rows
 }
 
-/**
- * Finds document chunks by their vector keys.
- *
- * Retrieves chunk information for specific vector keys (used in vector search).
- * Returns the associated document title for context.
- *
- * @param {Object} params - The parameters object
- * @param {string} params.userId - The ID of the user who owns the chunks
- * @param {Array<string>} params.vectorKeys - Array of vector key strings to find
- * @returns {Promise<Array<Object>>} A promise that resolves to an array of chunk objects
- *
- * @property {number} return.id - The chunk ID
- * @property {string} return.vectorKey - The vector key/identifier for the chunk
- * @property {string} return.content - The text content of the chunk
- * @property {Object} return.metadata - Additional metadata about the chunk
- * @property {string} return.title - The title of the parent document
- */
-export async function findChunksByVectorKeys({ userId, vectorKeys }) {
-  if (vectorKeys.length === 0) return []
-
+export async function findChunksByVector({ userId, vector, filter = {}, limit = 5 }) {
+  const values = [userId, toVectorLiteral(vector), filter, limit]
   const result = await withClient(client => client.query(
-    `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title
+    `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title,
+       round((1 - (dc.embedding <=> $2::vector))::numeric, 4)::float as score
      from document_chunks dc
      join documents d on d.id = dc.document_id
-     where dc.user_id = $1 and dc.vector_key::text = any($2::text[])`,
-    [userId, vectorKeys]
+     where dc.user_id = $1
+       and dc.embedding is not null
+       and dc.metadata @> $3::jsonb
+     order by dc.embedding <=> $2::vector
+     limit $4`,
+    values
   ))
 
   return result.rows

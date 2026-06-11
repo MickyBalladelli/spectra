@@ -20,6 +20,12 @@ io = new Server(server, {
 async function ensureDatabaseSchema() {
   try {
     await withClient(async client => {
+      try {
+        await client.query(`create extension if not exists vector`)
+      } catch (error) {
+        console.warn('pgvector extension check skipped:', error.message)
+      }
+
       const vectorKeyResult = await client.query(
         `select data_type from information_schema.columns
          where table_name = 'document_chunks'
@@ -46,6 +52,8 @@ async function ensureDatabaseSchema() {
       }
 
       await client.query(`create index if not exists documents_user_content_hash_idx on documents(user_id, content_hash)`)
+      await client.query(`alter table document_chunks add column if not exists embedding vector(128)`)
+      await client.query(`create index if not exists document_chunks_embedding_idx on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100)`)
       await client.query(`
         create table if not exists ingestion_jobs (
           id uuid primary key,

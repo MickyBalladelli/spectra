@@ -1,4 +1,5 @@
 create extension if not exists "uuid-ossp";
+create extension if not exists vector;
 
 create table if not exists documents (
   id uuid primary key,
@@ -22,6 +23,7 @@ create table if not exists document_chunks (
   user_id text not null default 'local',
   chunk_index integer not null,
   vector_key text not null unique,
+  embedding vector(128),
   content text not null,
   token_count integer not null default 0,
   metadata jsonb not null default '{}',
@@ -29,6 +31,7 @@ create table if not exists document_chunks (
 );
 
 alter table document_chunks add column if not exists user_id text not null default 'local';
+alter table document_chunks add column if not exists embedding vector(128);
 update document_chunks set user_id = d.user_id
   from documents d
   where d.id = document_chunks.document_id;
@@ -39,6 +42,7 @@ create index if not exists document_chunks_document_id_idx on document_chunks(do
 create index if not exists document_chunks_user_id_idx on document_chunks(user_id);
 create index if not exists document_chunks_vector_key_idx on document_chunks(vector_key);
 create index if not exists document_chunks_metadata_gin_idx on document_chunks using gin(metadata);
+create index if not exists document_chunks_embedding_idx on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
 
 create table if not exists query_audit_logs (
   id bigserial primary key,

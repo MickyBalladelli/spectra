@@ -1,7 +1,6 @@
 import { createChunks, createDocument, findDocumentByContentHash } from '../db/documents.js'
 import { chunkText } from '../vector/chunker.js'
 import { embedText } from '../vector/embedding.js'
-import { runVectorWorker } from '../vector/workerBridge.js'
 import { createHash } from 'crypto'
 
 /**
@@ -58,19 +57,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     }
   }))
 
-  await emitProgress({ stage: 'indexing', percent: 75, message: 'Writing turbovec index' })
-  const workerResult = await runVectorWorker({
-    operation: 'upsert',
-    documentId: document.id,
-    chunks: embeddedChunks.map(chunk => ({
-      chunkIndex: chunk.chunkIndex,
-      vectorKey: chunk.vectorKey,
-      vector: chunk.vector,
-      metadata: chunk.metadata
-    }))
-  })
-
-  await emitProgress({ stage: 'persisting', percent: 90, message: 'Saving indexed chunks' })
+  await emitProgress({ stage: 'persisting', percent: 75, message: 'Saving chunks and vectors' })
   const persistedChunks = await createChunks({
     userId,
     documentId: document.id,
@@ -82,7 +69,7 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
   return {
     document,
     chunks: persistedChunks,
-    vectorKeys: workerResult.vectorKeys
+    vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey)
   }
 }
 

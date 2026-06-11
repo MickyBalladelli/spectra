@@ -7,7 +7,6 @@ import { indexRoutes } from './routes/indexRoutes.js'
 import { ingestionRoutes } from './routes/ingestionRoutes.js'
 import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
-import { runVectorWorker } from './vector/workerBridge.js'
 
 export function createApp(getIo = () => null) {
   const app = express()
@@ -43,25 +42,20 @@ export function createApp(getIo = () => null) {
       }
       healthChecks.push({ name: 'database', ok: dbOk, message: dbMessage })
 
-      // Check worker process
-      let workerOk = false
-      let workerMessage = ''
-      let workerStats = null
-      const fs = await import('fs')
+      // Check pgvector-backed embeddings
+      let vectorOk = false
+      let vectorMessage = ''
+      let vectorStats = null
       try {
-        if (fs.existsSync('./workers/turbovec_worker.py')) {
-          workerOk = true
-          workerMessage = 'Worker script exists'
-          workerStats = await runVectorWorker({ operation: 'stats' })
-        } else {
-          workerOk = false
-          workerMessage = 'Worker script not found'
-        }
+        const result = await pool.query('select count(*)::int as vectors from document_chunks where embedding is not null')
+        vectorOk = true
+        vectorMessage = 'pgvector embeddings ready'
+        vectorStats = result.rows[0]
       } catch (error) {
-        workerOk = false
-        workerMessage = `Worker check error: ${error.message}`
+        vectorOk = false
+        vectorMessage = `Vector check error: ${error.message}`
       }
-      healthChecks.push({ name: 'worker', ok: workerOk, message: workerMessage, stats: workerStats })
+      healthChecks.push({ name: 'pgvector', ok: vectorOk, message: vectorMessage, stats: vectorStats })
 
       const allOk = healthChecks.every(check => check.ok)
 

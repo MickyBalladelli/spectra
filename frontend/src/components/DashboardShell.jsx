@@ -123,7 +123,7 @@ export function DashboardShell({ mode, onToggleMode }) {
             <Box sx={{ flex: 1 }}>
               <Typography variant="h4" sx={{ fontSize: { xs: 28, md: 34 } }}>Vector control room</Typography>
               <Typography color="text.secondary">
-                turbovec index, metadata, sockets
+                pgvector index, metadata, sockets
               </Typography>
             </Box>
             <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">

@@ -1,6 +1,9 @@
 import { pool } from '../src/db/pool.js'
 import { embedText } from '../src/vector/embedding.js'
-import { runVectorWorker } from '../src/vector/workerBridge.js'
+
+function toVectorLiteral(vector) {
+  return `[${vector.map(value => Number(value) || 0).join(',')}]`
+}
 
 async function loadChunks() {
   const result = await pool.query(
@@ -15,28 +18,17 @@ async function loadChunks() {
 
 async function rebuild() {
   const chunks = await loadChunks()
-  const byDocument = new Map()
 
   for (const chunk of chunks) {
-    const current = byDocument.get(chunk.documentId) || []
-    current.push({
-      chunkIndex: chunk.chunkIndex,
-      vectorKey: chunk.vectorKey,
-      vector: embedText(chunk.content),
-      metadata: chunk.metadata
-    })
-    byDocument.set(chunk.documentId, current)
+    await pool.query(
+      `update document_chunks
+       set embedding = $1::vector
+       where vector_key = $2`,
+      [toVectorLiteral(embedText(chunk.content)), chunk.vectorKey]
+    )
   }
 
-  for (const [documentId, documentChunks] of byDocument.entries()) {
-    await runVectorWorker({
-      operation: 'upsert',
-      documentId,
-      chunks: documentChunks
-    })
-  }
-
-  console.log(`Rebuilt ${chunks.length} vectors from ${byDocument.size} documents`)
+  console.log(`Rebuilt ${chunks.length} pgvector embeddings`)
 }
 
 rebuild()

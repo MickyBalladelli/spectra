@@ -1,6 +1,5 @@
-import { findChunksByText, findChunksByVectorKeys, writeQueryAudit } from '../db/documents.js'
+import { findChunksByText, findChunksByVector, writeQueryAudit } from '../db/documents.js'
 import { embedText } from '../vector/embedding.js'
-import { runVectorWorker } from '../vector/workerBridge.js'
 
 function getQueryTerms(query) {
   return query
@@ -45,28 +44,22 @@ export async function executeQuery({ userId, query, filter = {}, topK = 5 }) {
   const startedAt = Date.now()
   const vector = embedText(query)
 
-  const workerResult = await runVectorWorker({
-    operation: 'search',
-    query,
+  const exactRows = await findChunksByText({ userId, query, limit: topK })
+  const exactKeys = new Set(exactRows.map(row => String(row.vectorKey)))
+
+  const exactResults = exactRows.map(row => formatResult(row, query, 1.0))
+  const vectorRows = await findChunksByVector({
+    userId,
     vector,
     filter: {
       ...filter,
       userId
     },
-    topK
+    limit: topK
   })
 
-  const vectorKeys = workerResult.matches.map(match => match.vectorKey)
-  const rows = await findChunksByVectorKeys({ userId, vectorKeys })
-  const byKey = new Map(rows.map(row => [String(row.vectorKey), row]))
-
-  const exactRows = await findChunksByText({ userId, query, limit: topK })
-  const exactKeys = new Set(exactRows.map(row => String(row.vectorKey)))
-
-  const exactResults = exactRows.map(row => formatResult(row, query, 1.0))
-
-  const vectorResults = workerResult.matches
-    .map(match => formatResult(byKey.get(String(match.vectorKey)), query, match.score))
+  const vectorResults = vectorRows
+    .map(row => formatResult(row, query, row.score))
     .filter(result => result?.id && !exactKeys.has(String(result.vectorKey)))
 
   const results = exactResults.concat(vectorResults).slice(0, topK)

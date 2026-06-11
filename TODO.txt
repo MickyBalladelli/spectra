@@ -1,0 +1,64 @@
+Here is strong improvement list, in good order:
+
+Replace local JSON vector store
+  Use pgvector, Qdrant, LanceDB, or SQLite vector extension
+  Current temp/JSON store okay for demo, not solid long-term
+Real background worker
+  Move ingest jobs out of Express request process
+  Use a worker queue: BullMQ, pg-boss, or plain Postgres polling
+  Add retry, cancel, resume
+Server-side file upload
+  Upload files to backend
+  Parse PDFs server-side
+  Avoid giant browser JSON payloads
+Better batch ingest UX
+  Per-file progress
+  Per-file success/failure
+  Retry failed file
+  Skip duplicate file clearly
+Document detail page
+  Show metadata
+  Show chunks
+  Show vector keys
+  Show search hits inside document
+Better search ranking
+  Hybrid search: exact keyword + vector
+  Snippet generation around best match
+  Sort by combined score
+  Add filters by source, document, date
+Collections
+  Group documents into collections
+  Search within collection
+  Share collection with another user
+Permissions hardening
+  Ensure every route enforces user ownership
+  Add tests for cross-user access
+  Add admin/debug role later
+Observability
+  Request logs
+  Job logs
+  Worker logs
+  Search latency charts
+  Error history in Console
+Index rebuild UI
+  Button to rebuild vector index
+  Show rebuild progress
+  Compare DB chunks vs vector count
+Import/export
+  Export documents metadata
+  Export chunks
+  Import existing folder or ZIP
+Testing
+  Unit tests for chunking, hashing, query ranking
+  API tests for auth and ingest jobs
+  UI tests for ingest/search flows
+Deployment
+  Docker Compose for app + Postgres + vector store
+  Production env examples
+  Backup/restore docs
+UI polish
+  Document preview drawer
+  Search result preview drawer
+  Better empty states
+  Keyboard shortcuts for search
+  Toast notifications for job finish/failure
