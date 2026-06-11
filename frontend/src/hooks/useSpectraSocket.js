@@ -62,7 +62,7 @@ export function useSpectraSocket() {
     socket.on('ingestion:progress', pushEvent)
     socket.on('ingestion:completed', event => pushEvent({
       stage: 'completed',
-      message: `${event.chunks?.length || 0} chunks indexed`,
+      message: `${event.chunkCount ?? event.chunks?.length ?? 0} chunks indexed`,
       ...event
     }))
     socket.on('ingestion:error', event => pushEvent({

@@ -20,7 +20,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
 
   useEffect(() => {
     const handleCompleted = result => {
-      setProgress({ percent: 100, message: `${result.chunks?.length || 0} chunks indexed` })
+      setProgress({ percent: 100, message: `${result.chunkCount ?? result.chunks?.length ?? 0} chunks indexed` })
       refreshJobs().catch(() => {})
       onCompleted?.()
     }
