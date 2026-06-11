@@ -1,5 +1,5 @@
 import express from 'express'
-import { deleteDocument, getClusterStats, getDocument, listChunks, listDocuments } from '../db/documents.js'
+import { deleteDocument, getClusterStats, getDocument, listChunks, listDocumentChunks, listDocuments } from '../db/documents.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { rebuildUserVectorIndex } from '../services/indexMaintenanceService.js'
@@ -88,6 +88,27 @@ indexRoutes.get('/documents/:documentId', async (request, response, next) => {
     }
 
     return response.json(document)
+  } catch (error) {
+    next(error)
+  }
+})
+
+indexRoutes.get('/documents/:documentId/chunks', async (request, response, next) => {
+  try {
+    const userId = getUserIdFromRequest(request)
+    const document = await getDocument({
+      userId,
+      documentId: request.params.documentId
+    })
+
+    if (!document) {
+      return response.status(404).json({ error: 'Document not found' })
+    }
+
+    return response.json(await listDocumentChunks({
+      userId,
+      documentId: request.params.documentId
+    }))
   } catch (error) {
     next(error)
   }

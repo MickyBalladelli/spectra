@@ -10,11 +10,6 @@ Document detail page
   Show chunks
   Show vector keys
   Show search hits inside document
-Better search ranking
-  Hybrid search: exact keyword + vector
-  Snippet generation around best match
-  Sort by combined score
-  Add filters by source, document, date
 Observability
   Request logs
   Job logs

@@ -29,6 +29,7 @@ import { SearchView } from './SearchView.jsx'
 import { DocumentList } from './DocumentList.jsx'
 import { JobToast } from './JobToast.jsx'
 import { CollectionsView } from './CollectionsView.jsx'
+import { DocumentDetailPage } from './DocumentDetailPage.jsx'
 
 export function DashboardShell({ mode, onToggleMode }) {
   const [authOpen, setAuthOpen] = useState(false)
@@ -39,6 +40,7 @@ export function DashboardShell({ mode, onToggleMode }) {
   const [documents, setDocuments] = useState([])
   const [collections, setCollections] = useState([])
   const [toast, setToast] = useState(null)
+  const [selectedDocumentId, setSelectedDocumentId] = useState('')
   const { socket, status, events } = useSpectraSocket()
   const authToken = getAuthToken()
 
@@ -111,6 +113,15 @@ export function DashboardShell({ mode, onToggleMode }) {
       socket.off('index:rebuild:error', handleRebuildError)
     }
   }, [socket])
+
+  function openDocumentDetail(documentId) {
+    setSelectedDocumentId(documentId)
+    setTab('document-detail')
+  }
+
+  function closeDocumentDetail() {
+    setTab('documents')
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -204,6 +215,7 @@ export function DashboardShell({ mode, onToggleMode }) {
               <Tab value="overview" label="Overview" />
               <Tab value="ingest" label="Ingest" />
               <Tab value="documents" label="Documents" />
+              {selectedDocumentId && <Tab value="document-detail" label="Detail" />}
               <Tab value="collections" label="Collections" />
               <Tab value="explorer" label="Explorer" />
               <Tab value="search" label="Search" />
@@ -225,7 +237,10 @@ export function DashboardShell({ mode, onToggleMode }) {
               <IngestionPanel socket={socket} canIngest={Boolean(authToken)} onCompleted={loadData} />
             </Box>
             <Box hidden={tab !== 'documents'}>
-              <DocumentList documents={documents} onDocumentRemoved={loadData} />
+              <DocumentList documents={documents} onDocumentRemoved={loadData} onDocumentSelected={openDocumentDetail} />
+            </Box>
+            <Box hidden={tab !== 'document-detail'}>
+              <DocumentDetailPage documentId={selectedDocumentId} onBack={closeDocumentDetail} />
             </Box>
             <Box hidden={tab !== 'collections'}>
               <CollectionsView documents={documents} collections={collections} onChanged={loadData} />

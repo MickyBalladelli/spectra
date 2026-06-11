@@ -232,6 +232,21 @@ export async function listChunks({ userId, limit = 200 }) {
   return result.rows
 }
 
+export async function listDocumentChunks({ userId, documentId }) {
+  const result = await withClient(client => client.query(
+    `select dc.id, dc.document_id as "documentId", dc.chunk_index as "chunkIndex",
+      dc.vector_key as "vectorKey", dc.content, dc.token_count as "tokenCount",
+      dc.metadata, dc.created_at as "createdAt"
+     from document_chunks dc
+     join documents d on d.id = dc.document_id
+     where dc.user_id = $1 and d.user_id = $1 and dc.document_id = $2::uuid
+     order by dc.chunk_index asc`,
+    [userId, documentId]
+  ))
+
+  return result.rows
+}
+
 /**
  * Lists all documents for a user, ordered by creation date (newest first).
  *

@@ -14,14 +14,11 @@ import LanguageIcon from '@mui/icons-material/Language'
 import SearchIcon from '@mui/icons-material/Search'
 import { formatDistanceToNow } from 'date-fns'
 import { useMemo, useState } from 'react'
-import { apiDelete, apiGet } from '../api/client.js'
-import { DocumentPreviewDrawer } from './DocumentPreviewDrawer.jsx'
+import { apiDelete } from '../api/client.js'
 import { EmptyState } from './EmptyState.jsx'
 
-export function DocumentList({ documents, onDocumentRemoved }) {
+export function DocumentList({ documents, onDocumentRemoved, onDocumentSelected }) {
   const [nameFilter, setNameFilter] = useState('')
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [previewDocument, setPreviewDocument] = useState(null)
   const filteredDocuments = useMemo(() => {
     const query = nameFilter.trim().toLowerCase()
     if (!query) return documents || []
@@ -32,12 +29,6 @@ export function DocumentList({ documents, onDocumentRemoved }) {
   async function removeDocument(documentId) {
     await apiDelete(`/api/indexes/documents/${documentId}`)
     onDocumentRemoved?.()
-  }
-
-  async function openPreview(documentId) {
-    setPreviewOpen(true)
-    setPreviewDocument(null)
-    setPreviewDocument(await apiGet(`/api/indexes/documents/${documentId}`))
   }
 
   if (!documents || documents.length === 0) {
@@ -51,7 +42,6 @@ export function DocumentList({ documents, onDocumentRemoved }) {
   }
 
   return (
-    <>
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -83,9 +73,9 @@ export function DocumentList({ documents, onDocumentRemoved }) {
               key={doc.id}
               role="button"
               tabIndex={0}
-              onClick={() => openPreview(doc.id)}
+              onClick={() => onDocumentSelected?.(doc.id)}
               onKeyDown={event => {
-                if (event.key === 'Enter') openPreview(doc.id)
+                if (event.key === 'Enter') onDocumentSelected?.(doc.id)
               }}
               sx={{
                 display: 'grid',
@@ -125,11 +115,5 @@ export function DocumentList({ documents, onDocumentRemoved }) {
         )}
       </Stack>
     </Paper>
-    <DocumentPreviewDrawer
-      document={previewDocument}
-      open={previewOpen}
-      onClose={() => setPreviewOpen(false)}
-    />
-    </>
   )
 }
