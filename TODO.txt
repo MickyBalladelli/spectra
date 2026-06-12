@@ -1,5 +1,5 @@
 
-Add pause/resume ingestion worker
+
 Add ingestion queue position
 Add per-file estimated time
 Add document re-ingest button

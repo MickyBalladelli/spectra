@@ -8,6 +8,10 @@ import { BatchIngestFileList } from './BatchIngestFileList.jsx'
 import { WorkerControlPanel } from './WorkerControlPanel.jsx'
 
 function getJobDetail(job) {
+  if (job.status === 'queued' && job.queuePosition) {
+    return `Queued at position ${job.queuePosition}`
+  }
+
   if (job.status === 'canceled') return 'Ingestion canceled'
   if (job.status === 'canceling') return 'Cancel requested'
 
@@ -60,8 +64,17 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
     }
 
     const handleJob = job => {
-      setJobs(current => [job, ...current.filter(item => item.id !== job.id)].slice(0, 10))
+      setJobs(current => {
+        const existing = current.find(item => item.id === job.id)
+        const nextJob = {
+          ...job,
+          queuePosition: job.queuePosition ?? existing?.queuePosition ?? null
+        }
+
+        return [nextJob, ...current.filter(item => item.id !== job.id)].slice(0, 10)
+      })
       setProgress({ percent: job.percent || 0, message: job.message || job.status })
+      refreshJobs().catch(() => {})
     }
 
     socket.on('ingestion:progress', setProgress)
@@ -230,7 +243,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                 key={job.id}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 120px 80px auto' },
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 150px 90px auto' },
                   gap: 1,
                   alignItems: 'center',
                   p: 1.25,
@@ -250,7 +263,11 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                     {getJobDetail(job)}
                   </Typography>
                 </Box>
-                <Chip size="small" label={job.status} color={getJobColor(job)} />
+                <Chip
+                  size="small"
+                  label={job.queuePosition ? `${job.status} #${job.queuePosition}` : job.status}
+                  color={getJobColor(job)}
+                />
                 <Typography variant="body2" color="text.secondary">
                   {job.percent || 0}%
                 </Typography>

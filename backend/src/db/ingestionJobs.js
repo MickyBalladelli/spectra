@@ -80,6 +80,22 @@ export function toPublicIngestionJob(job) {
   }
 }
 
+export async function addQueuePositions({ userId, jobs }) {
+  const queueResult = await withClient(client => client.query(
+    `select id, row_number() over (order by created_at asc)::int as "queuePosition"
+     from ingestion_jobs
+     where user_id = $1 and status = 'queued'
+     order by created_at asc`,
+    [userId]
+  ))
+  const positions = new Map(queueResult.rows.map(row => [row.id, row.queuePosition]))
+
+  return jobs.map(job => ({
+    ...job,
+    queuePosition: positions.get(job.id) || null
+  }))
+}
+
 async function notifyIngestionJob(client, event, job) {
   await client.query(
     'select pg_notify($1, $2)',

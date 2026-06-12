@@ -1,7 +1,7 @@
 import express from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
-import { cancelIngestionJob, createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
+import { addQueuePositions, cancelIngestionJob, createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
 import { getIngestionWorkerControl, setIngestionWorkerPaused } from '../db/ingestionWorkerControl.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAdmin, requireAuth } from '../http/auth.js'
@@ -35,7 +35,12 @@ ingestionRoutes.post('/', requireAuth, async (request, response, next) => {
       : payload.title
     const job = await createIngestionJob({ userId, title, documentsTotal, payload })
 
-    response.status(202).json({ job: toPublicIngestionJob(job) })
+    const [publicJob] = await addQueuePositions({
+      userId,
+      jobs: [toPublicIngestionJob(job)]
+    })
+
+    response.status(202).json({ job: publicJob })
   } catch (error) {
     next(error)
   }
@@ -58,8 +63,13 @@ ingestionRoutes.post(
       const title = documentsTotal === 1 ? payload.uploads[0].originalName : `${documentsTotal} files`
       const job = await createIngestionJob({ userId, title, documentsTotal, payload })
 
+      const [publicJob] = await addQueuePositions({
+        userId,
+        jobs: [toPublicIngestionJob(job)]
+      })
+
       response.status(202).json({
-        job: toPublicIngestionJob(job),
+        job: publicJob,
         uploaded: documentsTotal
       })
     } catch (error) {
@@ -75,7 +85,10 @@ ingestionRoutes.get('/jobs', requireAuth, async (request, response, next) => {
       limit: Number(request.query.limit || 20)
     })
 
-    response.json(jobs.map(toPublicIngestionJob))
+    response.json(await addQueuePositions({
+      userId: getUserIdFromRequest(request),
+      jobs: jobs.map(toPublicIngestionJob)
+    }))
   } catch (error) {
     next(error)
   }
@@ -131,7 +144,12 @@ ingestionRoutes.post('/jobs/:jobId/retry', requireAuth, async (request, response
       payload
     })
 
-    return response.status(202).json({ job: toPublicIngestionJob(job) })
+    const [publicJob] = await addQueuePositions({
+      userId,
+      jobs: [toPublicIngestionJob(job)]
+    })
+
+    return response.status(202).json({ job: publicJob })
   } catch (error) {
     next(error)
   }
@@ -148,7 +166,12 @@ ingestionRoutes.post('/jobs/:jobId/cancel', requireAuth, async (request, respons
       return response.status(404).json({ error: 'Ingestion job not found' })
     }
 
-    return response.json({ job: toPublicIngestionJob(job) })
+    const [publicJob] = await addQueuePositions({
+      userId: getUserIdFromRequest(request),
+      jobs: [toPublicIngestionJob(job)]
+    })
+
+    return response.json({ job: publicJob })
   } catch (error) {
     next(error)
   }
