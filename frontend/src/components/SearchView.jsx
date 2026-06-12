@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Select, Stack, Switch, TextField, Typography, Skeleton } from '@mui/material'
+import InfoIcon from '@mui/icons-material/Info'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { HighlightedText } from './HighlightedText.jsx'
 import { getAuthToken } from '../userSession.js'
@@ -7,6 +8,7 @@ import { EmptyState } from './EmptyState.jsx'
 import { SearchResultPreviewDrawer } from './SearchResultPreviewDrawer.jsx'
 import { apiPost } from '../api/client.js'
 import { SearchFeedbackButtons } from './SearchFeedbackButtons.jsx'
+import { SearchExplainDrawer } from './SearchExplainDrawer.jsx'
 
 const filterExamples = [
   {
@@ -47,6 +49,8 @@ export function SearchView({ socket, collections = [], documents = [] }) {
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [previewResult, setPreviewResult] = useState(null)
+  const [explainResult, setExplainResult] = useState(null)
+  const [searchContext, setSearchContext] = useState({})
   const inputRef = useRef(null)
   const isSignedIn = Boolean(getAuthToken())
 
@@ -57,6 +61,11 @@ export function SearchView({ socket, collections = [], documents = [] }) {
       setQueryAuditId(payload.queryAuditId || null)
       setFeedback({})
       setNormalizedQuery(payload.normalizedQuery || '')
+      setSearchContext(current => ({
+        ...current,
+        latency: payload.latencyMs,
+        normalizedQuery: payload.normalizedQuery || ''
+      }))
       setSearchError('')
       setLoading(false)
     }
@@ -115,15 +124,31 @@ export function SearchView({ socket, collections = [], documents = [] }) {
       }
     }
 
+    const searchFilters = {
+      ...(sourceType ? { sourceType } : {}),
+      ...(documentId ? { documentId } : {}),
+      ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
+      ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {})
+    }
+    const selectedCollection = collections.find(collection => collection.id === collectionId)
+    const selectedDocument = documents.find(document => document.id === documentId)
+
+    setSearchContext({
+      query,
+      filter: parsedFilter,
+      searchFilters,
+      collectionName: selectedCollection?.name || '',
+      documentTitle: selectedDocument?.title || '',
+      dateFrom,
+      dateTo,
+      latency: null,
+      normalizedQuery: ''
+    })
+
     socket.emit('query:execute', {
       query,
       collectionId: collectionId || null,
-      searchFilters: {
-        ...(sourceType ? { sourceType } : {}),
-        ...(documentId ? { documentId } : {}),
-        ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
-        ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {})
-      },
+      searchFilters,
       filter: parsedFilter,
       topK: 5
     })
@@ -313,6 +338,17 @@ export function SearchView({ socket, collections = [], documents = [] }) {
                         value={feedback[result.id]}
                         onChange={rating => rateResult(result, rating)}
                       />
+                      <Button
+                        size="small"
+                        startIcon={<InfoIcon />}
+                        variant="outlined"
+                        onClick={event => {
+                          event.stopPropagation()
+                          setExplainResult(result)
+                        }}
+                      >
+                        Explain
+                      </Button>
                       <Chip size="small" color={getConfidenceColor(result.confidence)} variant="outlined" label={result.confidence || 'low'} />
                       <Chip size="small" color="success" variant="outlined" label={result.score} />
                       <Chip size="small" variant="outlined" label={`kw ${result.textScore ?? 0}`} />
@@ -338,6 +374,12 @@ export function SearchView({ socket, collections = [], documents = [] }) {
         query={normalizedQuery || query}
         open={Boolean(previewResult)}
         onClose={() => setPreviewResult(null)}
+      />
+      <SearchExplainDrawer
+        result={explainResult}
+        context={searchContext}
+        open={Boolean(explainResult)}
+        onClose={() => setExplainResult(null)}
       />
     </Grid>
   )
