@@ -257,7 +257,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                 key={job.id}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 150px 90px auto' },
+                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 150px 72px 108px' },
                   gap: 1,
                   alignItems: 'center',
                   p: 1.25,
@@ -281,8 +281,9 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                   size="small"
                   label={job.queuePosition ? `${job.status} #${job.queuePosition}` : job.status}
                   color={getJobColor(job)}
+                  sx={{ justifySelf: { md: 'start' }, width: { md: 138 } }}
                 />
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: { md: 'right' }, fontVariantNumeric: 'tabular-nums' }}>
                   {job.percent || 0}%
                 </Typography>
                 <Button
@@ -292,6 +293,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                   startIcon={<CancelIcon />}
                   onClick={() => cancelJob(job.id)}
                   disabled={!canCancelJob(job)}
+                  sx={{ justifySelf: { md: 'end' }, width: { md: 100 } }}
                 >
                   Cancel
                 </Button>

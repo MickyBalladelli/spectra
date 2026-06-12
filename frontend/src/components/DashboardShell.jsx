@@ -14,8 +14,6 @@ import {
 } from '@mui/material'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
-import SearchIcon from '@mui/icons-material/Search'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
 import geminiLogo from '../../images/gemini-svg.svg'
 import { apiGet } from '../api/client.js'
 import { useSpectraSocket } from '../hooks/useSpectraSocket.js'
@@ -152,12 +150,6 @@ export function DashboardShell({ mode, onToggleMode }) {
             pgvector index, metadata, sockets
           </Typography>
         </Box>
-        <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">
-          Ingest
-        </Button>
-        <Button startIcon={<SearchIcon />} variant="outlined" onClick={() => setTab('search')} aria-label="Open search panel">
-          Query
-        </Button>
         <Chip
           size="small"
           label={status}
