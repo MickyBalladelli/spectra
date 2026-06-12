@@ -2,7 +2,6 @@
 
 Add collection permissions roles: viewer/editor
 Add OCR for scanned PDFs
-Add file type preview before ingest
 Add background cleanup for uploaded temp files
 Add DB migrations instead of auto schema edits
 Add tests for ownership and ingestion failures

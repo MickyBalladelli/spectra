@@ -3,18 +3,9 @@ import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import ContentPasteIcon from '@mui/icons-material/ContentPaste'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import { FileTypePreview } from './FileTypePreview.jsx'
 
 const acceptedFileTypes = '.txt,.md,.markdown,.json,.csv,.pdf,application/pdf'
-
-function isPdf(file) {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-}
-
-function formatBytes(value) {
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`
-}
 
 export function DocumentInputZone({ title, text, files = [], onTitleChange, onTextChange, onSourceTypeChange, onFilesChange }) {
   const inputRef = useRef(null)
@@ -116,13 +107,7 @@ export function DocumentInputZone({ title, text, files = [], onTitleChange, onTe
             </Typography>
           )}
           {files.length > 0 && (
-            <Box sx={{ width: '100%', maxWidth: 560, textAlign: 'left' }}>
-              {files.map(file => (
-                <Typography key={`${file.name}-${file.size}`} variant="body2" color="text.secondary">
-                  {file.name} - {formatBytes(file.size)}
-                </Typography>
-              ))}
-            </Box>
+            <FileTypePreview files={files} />
           )}
         </Stack>
       </Box>
