@@ -1,4 +1,41 @@
+# Spectra Project TODO List
 
+## Code Quality & Testing
+- [ ] Add tests for ownership and ingestion failures
+  - Backend: Test authentication/authorization for document operations
+  - Backend: Test error handling in ingestion pipeline
+  - Frontend: Test error states in UI components
 
-Add tests for ownership and ingestion failures
-Add code splitting to reduce frontend bundle size
+## Performance Optimization
+- [x] Add code splitting to reduce frontend bundle size
+  - Vite already supports code splitting via dynamic imports
+  - Consider lazy-loading large components (DataExplorer, SearchView)
+  - Review bundle analysis with `npm run build` and check output stats
+
+## Documentation
+- [ ] Update IMPROVEMENTS.md with completed health check endpoint
+- [ ] Document code splitting implementation in frontend/README.md
+
+## Backend Improvements
+- [ ] Add comprehensive error handling for database operations
+- [ ] Implement retry logic for failed ingestion jobs
+- [ ] Add more detailed logging for troubleshooting
+
+## Frontend Improvements
+- [ ] Lazy-load non-critical components (ConsolePanel, DocumentDetailPage)
+- [ ] Optimize image assets (gemini-svg.svg, spectra.svg)
+- [ ] Add loading skeletons for better perceived performance
+
+## Infrastructure
+- [ ] Set up CI/CD pipeline for automated testing and deployment
+- [ ] Add Docker configuration for containerized deployment
+- [ ] Document production deployment checklist
+
+## Security
+- [ ] Review authentication token storage (currently in localStorage)
+- [ ] Implement CSRF protection for state-changing operations
+- [ ] Add rate limiting to API endpoints
+
+## Accessibility
+- [ ] Audit all components with axe-core
+- [ ] Fix any remaining accessibility issues identified in scripts/a11y-scan.js

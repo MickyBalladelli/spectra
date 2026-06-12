@@ -1,7 +1,8 @@
-import { findChunksByText, findChunksByVector, writeQueryAudit } from '../db/documents.js'
+import { findChunksByIds, findChunksByText, findChunksByVector, writeQueryAudit } from '../db/documents.js'
 import { env } from '../config/env.js'
 import { embedText } from '../vector/embedding.js'
 import { userCanAccessCollection } from '../db/collections.js'
+import { searchChunkVectors } from './turbovecClient.js'
 
 function getQueryTerms(query) {
   return query
@@ -90,14 +91,35 @@ export async function executeQuery({ userId, query, filter = {}, searchFilters =
   const exactRows = await findChunksByText({ userId, query: normalizedQuery, collectionId, searchFilters, limit: poolLimit })
 
   const queryTermCount = getQueryTerms(normalizedQuery).length || 1
-  const vectorRows = await findChunksByVector({
-    userId,
+  let vectorRows = []
+  const turbovecResults = await searchChunkVectors({
     vector,
-    collectionId,
-    searchFilters,
-    filter,
-    limit: poolLimit
+    limit: Math.max(poolLimit * 10, 100)
   })
+
+  if (turbovecResults) {
+    const scoreById = new Map(turbovecResults.map(result => [Number(result.id), Number(result.score) || 0]))
+    vectorRows = await findChunksByIds({
+      userId,
+      ids: turbovecResults.map(result => result.id),
+      scores: scoreById,
+      collectionId,
+      searchFilters,
+      filter,
+      limit: poolLimit
+    })
+  }
+
+  if (vectorRows.length === 0) {
+    vectorRows = await findChunksByVector({
+      userId,
+      vector,
+      collectionId,
+      searchFilters,
+      filter,
+      limit: poolLimit
+    })
+  }
 
   const byKey = new Map()
   for (const row of exactRows) {

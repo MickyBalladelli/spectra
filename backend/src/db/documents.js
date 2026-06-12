@@ -90,33 +90,59 @@ export async function createDocument({ userId, title, sourceType, text, metadata
  */
 export async function deleteDocument({ userId, documentId }) {
   try {
-    const result = await withClient(client => client.query(
-      `delete from documents
-       where id = $1 and user_id = $2
-       returning id`,
-      [documentId, userId]
-    ))
+    const result = await withClient(async client => {
+      await client.query('begin')
+
+      try {
+        const chunkResult = await client.query(
+          `select dc.id
+           from document_chunks dc
+           join documents d on d.id = dc.document_id
+           where dc.document_id = $1 and dc.user_id = $2 and d.user_id = $2`,
+          [documentId, userId]
+        )
+        const documentResult = await client.query(
+          `delete from documents
+           where id = $1 and user_id = $2
+           returning id`,
+          [documentId, userId]
+        )
+
+        await client.query('commit')
+
+        return {
+          rows: documentResult.rows,
+          chunkIds: chunkResult.rows.map(row => row.id)
+        }
+      } catch (error) {
+        await client.query('rollback')
+        throw error
+      }
+    })
 
     if (result.rows.length === 0) {
       return { success: false, message: 'Document not found or does not belong to user' }
     }
 
-    return { success: true }
+    return { success: true, chunkIds: result.chunkIds }
   } catch (error) {
     return { success: false, message: error.message }
   }
 }
 
 export async function deleteDocumentChunks({ userId, documentId }) {
-  await withClient(client => client.query(
+  const result = await withClient(client => client.query(
     `delete from document_chunks dc
      using documents d
      where dc.document_id = d.id
        and dc.user_id = $1
        and d.user_id = $1
-       and dc.document_id = $2::uuid`,
+       and dc.document_id = $2::uuid
+     returning dc.id`,
     [userId, documentId]
   ))
+
+  return result.rows.map(row => row.id)
 }
 
 /**
@@ -351,6 +377,64 @@ export async function findChunksByVector({ userId, vector, filter = {}, collecti
   ))
 
   return result.rows
+}
+
+export async function findChunksByIds({ userId, ids, scores = new Map(), filter = {}, collectionId = null, searchFilters = {}, limit = 5 }) {
+  const cleanIds = (ids || [])
+    .map(id => Number(id))
+    .filter(id => Number.isSafeInteger(id) && id > 0)
+
+  if (cleanIds.length === 0) return []
+
+  const result = await withClient(client => client.query(
+    `select dc.id, dc.vector_key as "vectorKey", dc.content, dc.metadata, d.title
+     from document_chunks dc
+     join documents d on d.id = dc.document_id
+     where dc.id = any($2::bigint[])
+       and (
+         ($5::uuid is null and dc.user_id = $1 and d.user_id = $1)
+         or (
+           $5::uuid is not null
+           and exists (
+             select 1
+             from collection_documents cd
+             join collections c on c.id = cd.collection_id
+             where cd.collection_id = $5::uuid
+               and cd.document_id = d.id
+               and (
+                 c.owner_user_id = $1
+                 or exists (
+                   select 1 from collection_shares cs
+                   where cs.collection_id = c.id and cs.user_id = $1
+                 )
+               )
+           )
+         )
+       )
+       and dc.metadata @> $3::jsonb
+       and ($6::text is null or d.source_type = $6)
+       and ($7::uuid is null or d.id = $7::uuid)
+       and ($8::timestamptz is null or d.created_at >= $8::timestamptz)
+       and ($9::timestamptz is null or d.created_at <= $9::timestamptz)
+     order by array_position($2::bigint[], dc.id)
+     limit $4`,
+    [
+      userId,
+      cleanIds,
+      filter,
+      limit,
+      collectionId,
+      searchFilters.sourceType || null,
+      searchFilters.documentId || null,
+      searchFilters.dateFrom || null,
+      searchFilters.dateTo || null
+    ]
+  ))
+
+  return result.rows.map(row => ({
+    ...row,
+    score: scores.get(Number(row.id)) || 0
+  }))
 }
 
 /**

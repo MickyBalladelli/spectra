@@ -9,6 +9,7 @@
     "dev:worker": "nodemon --watch src src/workers/ingestionWorker.js",
     "db:setup": "node scripts/setupDatabase.js",
     "vectors:rebuild": "node scripts/rebuildVectorStore.js",
+    "turbovec:sidecar": "python3 services/turbovec_service.py",
     "worker": "node src/workers/ingestionWorker.js",
     "start": "node src/server.js"
   },

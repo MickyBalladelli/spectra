@@ -1,5 +1,6 @@
 import { embedText } from '../vector/embedding.js'
 import { withClient } from '../db/pool.js'
+import { upsertChunkVectors } from './turbovecClient.js'
 
 function toVectorLiteral(vector) {
   return `[${vector.map(value => Number(value) || 0).join(',')}]`
@@ -28,12 +29,15 @@ export async function rebuildUserVectorIndex({ userId, emitProgress = () => {} }
   })
 
   for (const [index, chunk] of chunks.entries()) {
+    const vector = embedText(chunk.content)
+
     await withClient(client => client.query(
       `update document_chunks
        set embedding = $1::vector
        where id = $2 and user_id = $3`,
-      [toVectorLiteral(embedText(chunk.content)), chunk.id, userId]
+      [toVectorLiteral(vector), chunk.id, userId]
     ))
+    await upsertChunkVectors([{ id: chunk.id, vector }])
 
     const processed = index + 1
     await emitProgress({

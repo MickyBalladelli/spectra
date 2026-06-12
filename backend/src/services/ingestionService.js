@@ -1,6 +1,7 @@
 import { createChunks, createDocument, deleteDocumentChunks, findDocumentByContentHash, getDocument } from '../db/documents.js'
 import { chunkText } from '../vector/chunker.js'
 import { embedText } from '../vector/embedding.js'
+import { removeChunkVectors, upsertChunkVectors } from './turbovecClient.js'
 import { createHash } from 'crypto'
 
 async function rebuildDocumentChunks({ userId, document, text, documentMetadata, emitProgress, replaced = false }) {
@@ -22,10 +23,11 @@ async function rebuildDocumentChunks({ userId, document, text, documentMetadata,
 
   await emitProgress({ stage: 'persisting', percent: 75, message: replaced ? 'Replacing chunks and vectors' : 'Saving chunks and vectors' })
   if (replaced) {
-    await deleteDocumentChunks({
+    const deletedChunkIds = await deleteDocumentChunks({
       userId,
       documentId: document.id
     })
+    await removeChunkVectors(deletedChunkIds)
   }
 
   const persistedChunks = await createChunks({
@@ -33,6 +35,11 @@ async function rebuildDocumentChunks({ userId, document, text, documentMetadata,
     documentId: document.id,
     chunks: embeddedChunks
   })
+  const vectorsByKey = new Map(embeddedChunks.map(chunk => [chunk.vectorKey, chunk.vector]))
+  await upsertChunkVectors(persistedChunks.map(chunk => ({
+    id: chunk.id,
+    vector: vectorsByKey.get(chunk.vectorKey) || []
+  })))
 
   return {
     chunks: persistedChunks,

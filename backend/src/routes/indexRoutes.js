@@ -3,6 +3,7 @@ import { deleteDocument, getClusterStats, getDocument, listChunks, listDocumentC
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { rebuildUserVectorIndex } from '../services/indexMaintenanceService.js'
+import { removeChunkVectors } from '../services/turbovecClient.js'
 
 export const indexRoutes = express.Router()
 
@@ -126,6 +127,7 @@ indexRoutes.delete('/documents/:documentId', async (request, response, next) => 
       return response.status(404).json({ error: result.message })
     }
 
+    await removeChunkVectors(result.chunkIds)
     request.io?.to(`user:${userId}`).emit('documentDeleted', { userId, documentId: request.params.documentId })
 
     return response.json(result)

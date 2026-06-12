@@ -55,3 +55,14 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 
 - Rebuild vectors from PostgreSQL chunks with `npm run vectors:rebuild -w backend`
 - Run only the ingestion worker with `npm run worker -w backend`
+
+## Turbovec
+
+Spectra can use Turbovec as an optional compressed vector index while PostgreSQL stays the source of truth.
+
+1. Install sidecar deps with `pip install -r backend/services/requirements-turbovec.txt`
+2. Run the sidecar with `npm run turbovec:sidecar -w backend`
+3. Set `VECTOR_SEARCH_BACKEND=turbovec`
+4. Keep `TURBOVEC_DIM` equal to the embedding size. The current local embedding is `128`.
+
+When Turbovec is unavailable, search falls back to pgvector.

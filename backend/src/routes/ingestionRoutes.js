@@ -7,6 +7,7 @@ import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAdmin, requireAuth } from '../http/auth.js'
 import { deleteDocument, getDocument } from '../db/documents.js'
 import { uploadedFilesToPayload } from '../services/uploadParser.js'
+import { removeChunkVectors } from '../services/turbovecClient.js'
 
 const documentSchema = z.object({
   title: z.string().min(1),
@@ -258,6 +259,7 @@ ingestionRoutes.delete('/:documentId', requireAuth, async (request, response, ne
 
     // Notify other clients that the document was deleted
     const userId = getUserIdFromRequest(request)
+    await removeChunkVectors(result.chunkIds)
     request.io?.to(`user:${userId}`).emit('documentDeleted', { userId, documentId: request.params.documentId })
 
     return response.json(result)

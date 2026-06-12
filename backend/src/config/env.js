@@ -34,5 +34,8 @@ export const env = {
   ingestionWorkerPollMs: Number(process.env.INGESTION_WORKER_POLL_MS || 1000),
   uploadCleanupMaxAgeHours: Number(process.env.UPLOAD_CLEANUP_MAX_AGE_HOURS || 24),
   uploadCleanupIntervalMs: Number(process.env.UPLOAD_CLEANUP_INTERVAL_MS || 60 * 60 * 1000),
-  searchMinScore: Number(process.env.SEARCH_MIN_SCORE || 0.35)
+  searchMinScore: Number(process.env.SEARCH_MIN_SCORE || 0.35),
+  vectorSearchBackend: process.env.VECTOR_SEARCH_BACKEND || 'pgvector',
+  turbovecUrl: process.env.TURBOVEC_URL || 'http://127.0.0.1:7017',
+  turbovecTimeoutMs: Number(process.env.TURBOVEC_TIMEOUT_MS || 1500)
 }
