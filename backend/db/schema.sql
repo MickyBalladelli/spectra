@@ -64,6 +64,15 @@ create table if not exists search_feedback (
   unique (user_id, query_audit_id, chunk_id)
 );
 
+create table if not exists saved_searches (
+  id uuid primary key,
+  user_id text not null,
+  name text not null,
+  config jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists observability_logs (
   id bigserial primary key,
   type text not null,

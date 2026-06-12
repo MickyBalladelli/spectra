@@ -9,6 +9,7 @@ import { SearchResultPreviewDrawer } from './SearchResultPreviewDrawer.jsx'
 import { apiPost } from '../api/client.js'
 import { SearchFeedbackButtons } from './SearchFeedbackButtons.jsx'
 import { SearchExplainDrawer } from './SearchExplainDrawer.jsx'
+import { SavedSearchesPanel } from './SavedSearchesPanel.jsx'
 
 const filterExamples = [
   {
@@ -154,6 +155,41 @@ export function SearchView({ socket, collections = [], documents = [] }) {
     })
   }
 
+  function getCurrentSearchConfig() {
+    let parsedFilter = {}
+
+    if (useFilter) {
+      try {
+        parsedFilter = JSON.parse(filter || '{}')
+      } catch {
+        parsedFilter = {}
+      }
+    }
+
+    return {
+      query,
+      useFilter,
+      filter: parsedFilter,
+      collectionId,
+      sourceType,
+      documentId,
+      dateFrom,
+      dateTo
+    }
+  }
+
+  function loadSavedSearch(config) {
+    setQuery(config.query || '')
+    setUseFilter(Boolean(config.useFilter))
+    setFilter(JSON.stringify(config.filter || {}, null, 2))
+    setCollectionId(config.collectionId || '')
+    setSourceType(config.sourceType || '')
+    setDocumentId(config.documentId || '')
+    setDateFrom(config.dateFrom || '')
+    setDateTo(config.dateTo || '')
+    setFilterError('')
+  }
+
   async function rateResult(result, rating) {
     if (!queryAuditId) return
 
@@ -189,6 +225,11 @@ export function SearchView({ socket, collections = [], documents = [] }) {
                 Words find meaning. Filter narrows metadata.
               </Typography>
             </Box>
+            <SavedSearchesPanel
+              config={getCurrentSearchConfig()}
+              onLoad={loadSavedSearch}
+              disabled={!isSignedIn}
+            />
             <TextField
               inputRef={inputRef}
               label="Search text"

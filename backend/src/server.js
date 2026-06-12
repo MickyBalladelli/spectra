@@ -109,6 +109,17 @@ async function ensureDatabaseSchema() {
       `)
       await client.query(`create index if not exists search_feedback_user_created_idx on search_feedback(user_id, created_at desc)`)
       await client.query(`
+        create table if not exists saved_searches (
+          id uuid primary key,
+          user_id text not null,
+          name text not null,
+          config jsonb not null,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`create index if not exists saved_searches_user_updated_idx on saved_searches(user_id, updated_at desc)`)
+      await client.query(`
         create table if not exists ingestion_jobs (
           id uuid primary key,
           user_id text not null,

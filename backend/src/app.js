@@ -9,6 +9,7 @@ import { authRoutes } from './routes/authRoutes.js'
 import { queryRoutes } from './routes/queryRoutes.js'
 import { collectionRoutes } from './routes/collectionRoutes.js'
 import { observabilityRoutes } from './routes/observabilityRoutes.js'
+import { savedSearchRoutes } from './routes/savedSearchRoutes.js'
 import { recordErrorLog, recordRequestLog } from './services/observabilityService.js'
 
 export function createApp(getIo = () => null) {
@@ -119,6 +120,7 @@ export function createApp(getIo = () => null) {
   app.use('/api/query', queryRoutes)
   app.use('/api/collections', collectionRoutes)
   app.use('/api/observability', observabilityRoutes)
+  app.use('/api/saved-searches', savedSearchRoutes)
 
   // Centralized error handling middleware
   app.use((error, request, response, next) => {
