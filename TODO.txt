@@ -1,5 +1,4 @@
 
-Add document re-ingest button
 Add duplicate policy: skip / replace / version
 Add collection permissions roles: viewer/editor
 Add search explain view: keyword score, vector score, filters

@@ -107,6 +107,18 @@ export async function deleteDocument({ userId, documentId }) {
   }
 }
 
+export async function deleteDocumentChunks({ userId, documentId }) {
+  await withClient(client => client.query(
+    `delete from document_chunks dc
+     using documents d
+     where dc.document_id = d.id
+       and dc.user_id = $1
+       and d.user_id = $1
+       and dc.document_id = $2::uuid`,
+    [userId, documentId]
+  ))
+}
+
 /**
  * Creates multiple document chunks in the database.
  *

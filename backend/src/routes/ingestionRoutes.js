@@ -5,7 +5,7 @@ import { addQueuePositions, cancelIngestionJob, createIngestionJob, getIngestion
 import { getIngestionWorkerControl, setIngestionWorkerPaused } from '../db/ingestionWorkerControl.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAdmin, requireAuth } from '../http/auth.js'
-import { deleteDocument } from '../db/documents.js'
+import { deleteDocument, getDocument } from '../db/documents.js'
 import { uploadedFilesToPayload } from '../services/uploadParser.js'
 
 const documentSchema = z.object({
@@ -172,6 +172,44 @@ ingestionRoutes.post('/jobs/:jobId/cancel', requireAuth, async (request, respons
     })
 
     return response.json({ job: publicJob })
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.post('/documents/:documentId/reingest', requireAuth, async (request, response, next) => {
+  try {
+    const userId = getUserIdFromRequest(request)
+    const document = await getDocument({
+      userId,
+      documentId: request.params.documentId
+    })
+
+    if (!document) {
+      return response.status(404).json({ error: 'Document not found' })
+    }
+
+    const job = await createIngestionJob({
+      userId,
+      title: `Re-ingest ${document.title}`,
+      documentsTotal: 1,
+      payload: {
+        title: document.title,
+        sourceType: document.sourceType,
+        text: document.body,
+        metadata: {
+          ...(document.metadata || {}),
+          source: 'document-reingest',
+          reingestDocumentId: document.id
+        }
+      }
+    })
+    const [publicJob] = await addQueuePositions({
+      userId,
+      jobs: [toPublicIngestionJob(job)]
+    })
+
+    return response.status(202).json({ job: publicJob })
   } catch (error) {
     next(error)
   }

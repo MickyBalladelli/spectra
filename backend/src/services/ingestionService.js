@@ -1,4 +1,4 @@
-import { createChunks, createDocument, findDocumentByContentHash } from '../db/documents.js'
+import { createChunks, createDocument, deleteDocumentChunks, findDocumentByContentHash, getDocument } from '../db/documents.js'
 import { chunkText } from '../vector/chunker.js'
 import { embedText } from '../vector/embedding.js'
 import { createHash } from 'crypto'
@@ -20,6 +20,56 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     userId,
     title,
     sourceType
+  }
+
+  if (metadata.reingestDocumentId) {
+    const document = await getDocument({
+      userId,
+      documentId: metadata.reingestDocumentId
+    })
+
+    if (!document) {
+      const error = new Error('Document not found')
+      error.status = 404
+      throw error
+    }
+
+    await emitProgress({ stage: 'chunking', percent: 25, message: 'Rebuilding chunks' })
+    const chunks = chunkText(text)
+
+    await emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
+    const embeddedChunks = chunks.map(chunk => ({
+      ...chunk,
+      vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
+      vector: embedText(chunk.content),
+      metadata: {
+        ...documentMetadata,
+        documentId: document.id,
+        chunkIndex: chunk.chunkIndex,
+        reingestedAt: new Date().toISOString()
+      }
+    }))
+
+    await emitProgress({ stage: 'persisting', percent: 75, message: 'Replacing chunks and vectors' })
+    await deleteDocumentChunks({
+      userId,
+      documentId: document.id
+    })
+    const persistedChunks = await createChunks({
+      userId,
+      documentId: document.id,
+      chunks: embeddedChunks
+    })
+
+    await emitProgress({ stage: 'completed', percent: 100, message: 'Document re-indexed' })
+
+    return {
+      fileName: document.title,
+      document,
+      chunks: persistedChunks,
+      vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey),
+      reingested: true
+    }
   }
 
   // Create SHA-256 hash of document content for deduplication

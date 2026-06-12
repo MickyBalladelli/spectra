@@ -13,10 +13,11 @@ import {
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import KeyIcon from '@mui/icons-material/Key'
+import ReplayIcon from '@mui/icons-material/Replay'
 import SearchIcon from '@mui/icons-material/Search'
 import SegmentIcon from '@mui/icons-material/Segment'
 import StorageIcon from '@mui/icons-material/Storage'
-import { apiGet } from '../api/client.js'
+import { apiGet, apiPost } from '../api/client.js'
 import { HighlightedText } from './HighlightedText.jsx'
 import { EmptyState } from './EmptyState.jsx'
 
@@ -49,6 +50,8 @@ export function DocumentDetailPage({ documentId, onBack }) {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [reingesting, setReingesting] = useState(false)
 
   useEffect(() => {
     if (!documentId) return
@@ -94,6 +97,21 @@ export function DocumentDetailPage({ documentId, onBack }) {
 
   const vectorKeys = useMemo(() => chunks.map(chunk => chunk.vectorKey).filter(Boolean), [chunks])
   const totalHits = useMemo(() => matchedChunks.reduce((total, chunk) => total + (chunk.hitCount || 0), 0), [matchedChunks])
+
+  async function reingestDocument() {
+    setReingesting(true)
+    setError('')
+    setNotice('')
+
+    try {
+      const result = await apiPost(`/api/ingestions/documents/${documentId}/reingest`, {})
+      setNotice(`${result.job.title} queued${result.job.queuePosition ? ` at position ${result.job.queuePosition}` : ''}`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setReingesting(false)
+    }
+  }
 
   if (!documentId) {
     return (
@@ -143,9 +161,18 @@ export function DocumentDetailPage({ documentId, onBack }) {
                 {document.sourceType} - {formatDate(document.createdAt)}
               </Typography>
             </Box>
+            <Button
+              startIcon={<ReplayIcon />}
+              variant="outlined"
+              onClick={reingestDocument}
+              disabled={reingesting}
+            >
+              Re-ingest
+            </Button>
             <Chip label={`${chunks.length} chunks`} color="primary" variant="outlined" />
             <Chip label={`${vectorKeys.length} vector keys`} variant="outlined" />
           </Stack>
+          {notice && <Alert severity="success">{notice}</Alert>}
 
           <Box
             sx={{
