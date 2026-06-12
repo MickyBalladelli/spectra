@@ -1,8 +1,6 @@
 
 
 Add collection permissions roles: viewer/editor
-Add saved searches
-Add chunk editor or chunk inspector improvements
 Add OCR for scanned PDFs
 Add file type preview before ingest
 Add background cleanup for uploaded temp files

@@ -232,7 +232,8 @@ export async function getClusterStats({ userId }) {
 export async function listChunks({ userId, limit = 200 }) {
   const result = await withClient(client => client.query(
     `select dc.id, dc.document_id as "documentId", d.title, dc.chunk_index as "chunkIndex",
-      dc.vector_key as "vectorKey", dc.content, dc.token_count as "tokenCount", dc.created_at as "createdAt"
+      dc.vector_key as "vectorKey", dc.content, dc.token_count as "tokenCount",
+      dc.metadata, dc.created_at as "createdAt"
      from document_chunks dc
      join documents d on d.id = dc.document_id
      where dc.user_id = $1 and d.user_id = $1
