@@ -126,7 +126,7 @@ export async function executeQuery({ userId, query, filter = {}, searchFilters =
     .slice(0, topK)
   const latencyMs = Date.now() - startedAt
 
-  await writeQueryAudit({
+  const queryAudit = await writeQueryAudit({
     userId,
     query,
     filter,
@@ -136,6 +136,7 @@ export async function executeQuery({ userId, query, filter = {}, searchFilters =
   })
 
   return {
+    queryAuditId: queryAudit?.id || null,
     latencyMs,
     normalizedQuery,
     results

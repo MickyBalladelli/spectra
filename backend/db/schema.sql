@@ -54,6 +54,16 @@ create table if not exists query_audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists search_feedback (
+  id bigserial primary key,
+  user_id text not null,
+  query_audit_id bigint not null references query_audit_logs(id) on delete cascade,
+  chunk_id bigint not null references document_chunks(id) on delete cascade,
+  rating text not null check (rating in ('good', 'bad')),
+  created_at timestamptz not null default now(),
+  unique (user_id, query_audit_id, chunk_id)
+);
+
 create table if not exists observability_logs (
   id bigserial primary key,
   type text not null,

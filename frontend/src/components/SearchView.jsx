@@ -5,6 +5,8 @@ import { HighlightedText } from './HighlightedText.jsx'
 import { getAuthToken } from '../userSession.js'
 import { EmptyState } from './EmptyState.jsx'
 import { SearchResultPreviewDrawer } from './SearchResultPreviewDrawer.jsx'
+import { apiPost } from '../api/client.js'
+import { SearchFeedbackButtons } from './SearchFeedbackButtons.jsx'
 
 const filterExamples = [
   {
@@ -34,6 +36,8 @@ export function SearchView({ socket, collections = [], documents = [] }) {
   const [filterError, setFilterError] = useState('')
   const [latency, setLatency] = useState(null)
   const [results, setResults] = useState([])
+  const [queryAuditId, setQueryAuditId] = useState(null)
+  const [feedback, setFeedback] = useState({})
   const [normalizedQuery, setNormalizedQuery] = useState('')
   const [collectionId, setCollectionId] = useState('')
   const [sourceType, setSourceType] = useState('')
@@ -50,6 +54,8 @@ export function SearchView({ socket, collections = [], documents = [] }) {
     const handleResults = payload => {
       setLatency(payload.latencyMs)
       setResults(payload.results)
+      setQueryAuditId(payload.queryAuditId || null)
+      setFeedback({})
       setNormalizedQuery(payload.normalizedQuery || '')
       setSearchError('')
       setLoading(false)
@@ -121,6 +127,28 @@ export function SearchView({ socket, collections = [], documents = [] }) {
       filter: parsedFilter,
       topK: 5
     })
+  }
+
+  async function rateResult(result, rating) {
+    if (!queryAuditId) return
+
+    setFeedback(current => ({
+      ...current,
+      [result.id]: rating
+    }))
+
+    try {
+      await apiPost('/api/query/feedback', {
+        queryAuditId,
+        chunkId: result.id,
+        rating
+      })
+    } catch {
+      setFeedback(current => ({
+        ...current,
+        [result.id]: ''
+      }))
+    }
   }
 
   const sourceTypes = Array.from(new Set(documents.map(document => document.sourceType).filter(Boolean))).sort()
@@ -281,6 +309,10 @@ export function SearchView({ socket, collections = [], documents = [] }) {
                   <Stack direction="row" justifyContent="space-between" gap={2}>
                     <Typography variant="subtitle2">{result.title}</Typography>
                     <Stack direction="row" spacing={1}>
+                      <SearchFeedbackButtons
+                        value={feedback[result.id]}
+                        onChange={rating => rateResult(result, rating)}
+                      />
                       <Chip size="small" color={getConfidenceColor(result.confidence)} variant="outlined" label={result.confidence || 'low'} />
                       <Chip size="small" color="success" variant="outlined" label={result.score} />
                       <Chip size="small" variant="outlined" label={`kw ${result.textScore ?? 0}`} />

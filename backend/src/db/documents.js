@@ -449,11 +449,14 @@ export async function findChunksByText({ userId, query, collectionId = null, sea
  * @param {number} params.resultCount - Number of results returned by the query
  */
 export async function writeQueryAudit({ userId, query, filter, latencyMs, resultCount }) {
-  await withClient(client => client.query(
+  const result = await withClient(client => client.query(
     `insert into query_audit_logs (user_id, query_text, filter, latency_ms, result_count)
-     values ($1, $2, $3, $4, $5)`,
+     values ($1, $2, $3, $4, $5)
+     returning id`,
     [userId, query, filter, latencyMs, resultCount]
   ))
+
+  return result.rows[0] || null
 }
 
 export async function listQueryLatency({ userId, isAdmin = false, limit = 50, filters = {} }) {

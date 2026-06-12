@@ -2,7 +2,6 @@
 Add duplicate policy: skip / replace / version
 Add collection permissions roles: viewer/editor
 Add search explain view: keyword score, vector score, filters
-Add search feedback: good/bad result
 Add saved searches
 Add chunk editor or chunk inspector improvements
 Add OCR for scanned PDFs
