@@ -1,6 +1,13 @@
-import { updateIngestionJob } from '../db/ingestionJobs.js'
+import { ingestionJobCancelRequested, updateIngestionJob } from '../db/ingestionJobs.js'
 import { ingestDocument } from './ingestionService.js'
 import { uploadedFilesPayloadToDocuments } from './uploadParser.js'
+
+class IngestionCanceledError extends Error {
+  constructor() {
+    super('Ingestion canceled')
+    this.name = 'IngestionCanceledError'
+  }
+}
 
 function getDocumentsCompleted(progress) {
   if (progress.documentIndex === undefined) {
@@ -14,6 +21,13 @@ export async function runIngestionJob(job) {
   const userId = job.userId
 
   try {
+    async function stopIfCanceled() {
+      if (await ingestionJobCancelRequested({ userId, jobId: job.id })) {
+        throw new IngestionCanceledError()
+      }
+    }
+
+    await stopIfCanceled()
     const payload = await uploadedFilesPayloadToDocuments(job.payload)
     const fileStatuses = Array.isArray(payload.documents)
       ? payload.documents.map((document, index) => ({
@@ -34,6 +48,7 @@ export async function runIngestionJob(job) {
       }]
 
     const result = await ingestDocument({ ...payload, userId }, async progress => {
+      await stopIfCanceled()
       const fileIndex = progress.documentIndex ?? 0
       const currentFile = fileStatuses[fileIndex]
 
@@ -59,6 +74,7 @@ export async function runIngestionJob(job) {
         }
       })
     })
+    await stopIfCanceled()
     const finalFiles = Array.isArray(result.documents)
       ? result.documents.map((document, index) => ({
         index,
@@ -108,6 +124,21 @@ export async function runIngestionJob(job) {
       }
     })
   } catch (error) {
+    if (error.name === 'IngestionCanceledError') {
+      await updateIngestionJob({
+        jobId: job.id,
+        userId,
+        patch: {
+          status: 'canceled',
+          stage: 'canceled',
+          message: 'Ingestion canceled',
+          completedAt: new Date(),
+          lockedAt: null
+        }
+      })
+      return
+    }
+
     await updateIngestionJob({
       jobId: job.id,
       userId,

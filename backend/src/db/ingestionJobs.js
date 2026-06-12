@@ -147,6 +147,59 @@ export async function updateIngestionJob({ jobId, userId, patch }) {
   return mapJob(result.rows[0])
 }
 
+export async function cancelIngestionJob({ userId, jobId }) {
+  const result = await withClient(async client => {
+    const updateResult = await client.query(
+      `update ingestion_jobs
+       set status = case
+           when status = 'queued' then 'canceled'
+           when status = 'running' then 'canceling'
+           else status
+         end,
+         stage = case
+           when status in ('queued', 'running') then 'canceled'
+           else stage
+         end,
+         message = case
+           when status = 'queued' then 'Ingestion canceled'
+           when status = 'running' then 'Cancel requested'
+           else message
+         end,
+         completed_at = case
+           when status = 'queued' then now()
+           else completed_at
+         end,
+         locked_at = case
+           when status = 'queued' then null
+           else locked_at
+         end,
+         updated_at = now()
+       where id = $1 and user_id = $2
+       returning ${jobColumns}`,
+      [jobId, userId]
+    )
+    const job = mapJob(updateResult.rows[0])
+    if (job) {
+      await notifyIngestionJob(client, job.status, job)
+    }
+    return updateResult
+  })
+
+  return mapJob(result.rows[0])
+}
+
+export async function ingestionJobCancelRequested({ userId, jobId }) {
+  const result = await withClient(client => client.query(
+    `select status
+     from ingestion_jobs
+     where id = $1 and user_id = $2
+     limit 1`,
+    [jobId, userId]
+  ))
+
+  return ['canceling', 'canceled'].includes(result.rows[0]?.status)
+}
+
 export async function claimNextIngestionJob({ workerId }) {
   return withClient(async client => {
     await client.query('begin')

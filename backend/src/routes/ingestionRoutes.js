@@ -1,7 +1,7 @@
 import express from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
-import { createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
+import { cancelIngestionJob, createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
 import { requireAuth } from '../http/auth.js'
 import { deleteDocument } from '../db/documents.js'
@@ -131,6 +131,23 @@ ingestionRoutes.post('/jobs/:jobId/retry', requireAuth, async (request, response
     })
 
     return response.status(202).json({ job: toPublicIngestionJob(job) })
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.post('/jobs/:jobId/cancel', requireAuth, async (request, response, next) => {
+  try {
+    const job = await cancelIngestionJob({
+      userId: getUserIdFromRequest(request),
+      jobId: request.params.jobId
+    })
+
+    if (!job) {
+      return response.status(404).json({ error: 'Ingestion job not found' })
+    }
+
+    return response.json({ job: toPublicIngestionJob(job) })
   } catch (error) {
     next(error)
   }

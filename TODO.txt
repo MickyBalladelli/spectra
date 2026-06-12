@@ -1,5 +1,4 @@
-Add admin-only observability view
-Add job cancel button
+
 Add pause/resume ingestion worker
 Add ingestion queue position
 Add per-file estimated time

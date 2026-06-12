@@ -1,16 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material'
+import CancelIcon from '@mui/icons-material/Cancel'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 import { BatchIngestFileList } from './BatchIngestFileList.jsx'
 
 function getJobDetail(job) {
+  if (job.status === 'canceled') return 'Ingestion canceled'
+  if (job.status === 'canceling') return 'Cancel requested'
+
   if (job.status === 'failed') {
     return job.error || job.message || 'Ingestion failed'
   }
 
   return job.message || job.stage || job.status
+}
+
+function canCancelJob(job) {
+  return ['queued', 'running'].includes(job.status)
+}
+
+function getJobColor(job) {
+  if (job.status === 'completed') return 'success'
+  if (job.status === 'failed') return 'error'
+  if (['canceled', 'canceling'].includes(job.status)) return 'warning'
+  return 'default'
 }
 
 export function IngestionPanel({ socket, canIngest, onCompleted }) {
@@ -111,6 +126,21 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
     }
   }
 
+  async function cancelJob(jobId) {
+    setError('')
+
+    try {
+      const result = await apiPost(`/api/ingestions/jobs/${jobId}/cancel`, {})
+      setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
+      setProgress({
+        percent: result.job.percent || 0,
+        message: result.job.message || result.job.status
+      })
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   const hasFiles = files.length > 0
   const canStart = canIngest && (hasFiles || text.trim() !== '')
 
@@ -189,7 +219,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                 key={job.id}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 120px 110px' },
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 120px 80px auto' },
                   gap: 1,
                   alignItems: 'center',
                   p: 1.25,
@@ -209,10 +239,20 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
                     {getJobDetail(job)}
                   </Typography>
                 </Box>
-                <Chip size="small" label={job.status} color={job.status === 'completed' ? 'success' : job.status === 'failed' ? 'error' : 'default'} />
+                <Chip size="small" label={job.status} color={getJobColor(job)} />
                 <Typography variant="body2" color="text.secondary">
                   {job.percent || 0}%
                 </Typography>
+                <Button
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  startIcon={<CancelIcon />}
+                  onClick={() => cancelJob(job.id)}
+                  disabled={!canCancelJob(job)}
+                >
+                  Cancel
+                </Button>
               </Box>
             ))}
           </Paper>
