@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, FormControl, InputLabel, LinearProgress, MenuItem, Paper, Select, Stack, Typography } from '@mui/material'
 import CancelIcon from '@mui/icons-material/Cancel'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
@@ -38,6 +38,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [sourceType, setSourceType] = useState('raw')
+  const [duplicatePolicy, setDuplicatePolicy] = useState('skip')
   const [progress, setProgress] = useState({ percent: 0, message: 'Idle' })
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
@@ -116,8 +117,8 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
 
     try {
       const result = files.length > 0
-        ? await apiUploadFiles('/api/ingestions/files', files, { source: 'dashboard' })
-        : await apiPost('/api/ingestions', { title, sourceType, text, metadata: { source: 'dashboard' } })
+        ? await apiUploadFiles('/api/ingestions/files', files, { source: 'dashboard', duplicatePolicy })
+        : await apiPost('/api/ingestions', { title, sourceType, text, metadata: { source: 'dashboard', duplicatePolicy } })
       setActiveJobId(result.job.id)
       setJobs(current => [result.job, ...current.filter(item => item.id !== result.job.id)].slice(0, 10))
       setProgress({
@@ -222,6 +223,19 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           sx={{ height: 8, borderRadius: 1 }}
         />
         <WorkerControlPanel isAdmin={viewer.isAdmin} />
+        <FormControl size="small" sx={{ maxWidth: 320 }}>
+          <InputLabel id="duplicate-policy-label">Duplicate policy</InputLabel>
+          <Select
+            labelId="duplicate-policy-label"
+            label="Duplicate policy"
+            value={duplicatePolicy}
+            onChange={event => setDuplicatePolicy(event.target.value)}
+          >
+            <MenuItem value="skip">Skip duplicate</MenuItem>
+            <MenuItem value="replace">Replace existing</MenuItem>
+            <MenuItem value="version">Create version</MenuItem>
+          </Select>
+        </FormControl>
         <DocumentInputZone
           title={title}
           text={text}

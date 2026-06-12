@@ -3,6 +3,43 @@ import { chunkText } from '../vector/chunker.js'
 import { embedText } from '../vector/embedding.js'
 import { createHash } from 'crypto'
 
+async function rebuildDocumentChunks({ userId, document, text, documentMetadata, emitProgress, replaced = false }) {
+  await emitProgress({ stage: 'chunking', percent: 25, message: replaced ? 'Rebuilding chunks' : 'Chunking text' })
+  const chunks = chunkText(text)
+
+  await emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
+  const embeddedChunks = chunks.map(chunk => ({
+    ...chunk,
+    vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
+    vector: embedText(chunk.content),
+    metadata: {
+      ...documentMetadata,
+      documentId: document.id,
+      chunkIndex: chunk.chunkIndex,
+      ...(replaced ? { replacedAt: new Date().toISOString() } : {})
+    }
+  }))
+
+  await emitProgress({ stage: 'persisting', percent: 75, message: replaced ? 'Replacing chunks and vectors' : 'Saving chunks and vectors' })
+  if (replaced) {
+    await deleteDocumentChunks({
+      userId,
+      documentId: document.id
+    })
+  }
+
+  const persistedChunks = await createChunks({
+    userId,
+    documentId: document.id,
+    chunks: embeddedChunks
+  })
+
+  return {
+    chunks: persistedChunks,
+    vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey)
+  }
+}
+
 /**
  * Processes a single document through the ingestion pipeline
  * @param {Object} payload - Document data and configuration
@@ -34,31 +71,16 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
       throw error
     }
 
-    await emitProgress({ stage: 'chunking', percent: 25, message: 'Rebuilding chunks' })
-    const chunks = chunkText(text)
-
-    await emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
-    const embeddedChunks = chunks.map(chunk => ({
-      ...chunk,
-      vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
-      vector: embedText(chunk.content),
-      metadata: {
+    const rebuilt = await rebuildDocumentChunks({
+      userId,
+      document,
+      text,
+      documentMetadata: {
         ...documentMetadata,
-        documentId: document.id,
-        chunkIndex: chunk.chunkIndex,
         reingestedAt: new Date().toISOString()
-      }
-    }))
-
-    await emitProgress({ stage: 'persisting', percent: 75, message: 'Replacing chunks and vectors' })
-    await deleteDocumentChunks({
-      userId,
-      documentId: document.id
-    })
-    const persistedChunks = await createChunks({
-      userId,
-      documentId: document.id,
-      chunks: embeddedChunks
+      },
+      emitProgress,
+      replaced: true
     })
 
     await emitProgress({ stage: 'completed', percent: 100, message: 'Document re-indexed' })
@@ -66,19 +88,19 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     return {
       fileName: document.title,
       document,
-      chunks: persistedChunks,
-      vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey),
+      chunks: rebuilt.chunks,
+      vectorKeys: rebuilt.vectorKeys,
       reingested: true
     }
   }
 
   // Create SHA-256 hash of document content for deduplication
   const contentHash = createHash('sha256').update(text, 'utf8').digest('hex')
+  const duplicatePolicy = metadata.duplicatePolicy || 'skip'
   // Check if identical document already exists in database
   const existingDocument = await findDocumentByContentHash({ userId, contentHash, body: text })
 
-  // Skip processing if duplicate found
-  if (existingDocument) {
+  if (existingDocument && duplicatePolicy === 'skip') {
     await emitProgress({ stage: 'duplicate', percent: 100, message: 'Document already indexed' })
 
     return {
@@ -90,29 +112,48 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
     }
   }
 
+  if (existingDocument && duplicatePolicy === 'replace') {
+    const rebuilt = await rebuildDocumentChunks({
+      userId,
+      document: existingDocument,
+      text,
+      documentMetadata: {
+        ...documentMetadata,
+        duplicatePolicy,
+        replacedDuplicateAt: new Date().toISOString()
+      },
+      emitProgress,
+      replaced: true
+    })
+
+    await emitProgress({ stage: 'completed', percent: 100, message: 'Duplicate replaced' })
+
+    return {
+      replaced: true,
+      fileName: metadata.sourceFileName || title,
+      document: existingDocument,
+      chunks: rebuilt.chunks,
+      vectorKeys: rebuilt.vectorKeys
+    }
+  }
+
   await emitProgress({ stage: 'metadata', percent: 10, message: 'Saving document' })
-  const document = await createDocument({ userId, title, sourceType, text, metadata: documentMetadata })
-
-  await emitProgress({ stage: 'chunking', percent: 25, message: 'Chunking text' })
-  const chunks = chunkText(text)
-
-  await emitProgress({ stage: 'embedding', percent: 55, message: 'Embedding chunks' })
-  const embeddedChunks = chunks.map(chunk => ({
-    ...chunk,
-    vectorKey: createHash('sha256').update(`${document.id}:${chunk.chunkIndex}:${chunk.content}`, 'utf8').digest('hex').slice(0, 15),
-    vector: embedText(chunk.content),
+  const document = await createDocument({
+    userId,
+    title: existingDocument && duplicatePolicy === 'version' ? `${title} (version)` : title,
+    sourceType,
+    text,
     metadata: {
       ...documentMetadata,
-      documentId: document.id,
-      chunkIndex: chunk.chunkIndex
+      ...(existingDocument && duplicatePolicy === 'version' ? { duplicateOfDocumentId: existingDocument.id } : {})
     }
-  }))
-
-  await emitProgress({ stage: 'persisting', percent: 75, message: 'Saving chunks and vectors' })
-  const persistedChunks = await createChunks({
+  })
+  const rebuilt = await rebuildDocumentChunks({
     userId,
-    documentId: document.id,
-    chunks: embeddedChunks
+    document,
+    text,
+    documentMetadata,
+    emitProgress
   })
 
   await emitProgress({ stage: 'completed', percent: 100, message: 'Document indexed' })
@@ -120,8 +161,9 @@ async function ingestSingleDocument({ userId, title, sourceType = 'raw', text, m
   return {
     fileName: metadata.sourceFileName || title,
     document,
-    chunks: persistedChunks,
-    vectorKeys: embeddedChunks.map(chunk => chunk.vectorKey)
+    chunks: rebuilt.chunks,
+    vectorKeys: rebuilt.vectorKeys,
+    versioned: Boolean(existingDocument && duplicatePolicy === 'version')
   }
 }
 

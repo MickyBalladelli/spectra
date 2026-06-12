@@ -85,7 +85,11 @@ export async function runIngestionJob(job) {
           ? document.error
           : document.duplicate
             ? 'Skipped duplicate'
-            : 'Indexed',
+            : document.replaced
+              ? 'Replaced duplicate'
+              : document.versioned
+                ? 'Created version'
+                : 'Indexed',
         error: document.error || null,
         documentId: document.document?.id || null,
         chunkCount: Array.isArray(document.chunks) ? document.chunks.length : 0,
@@ -96,7 +100,13 @@ export async function runIngestionJob(job) {
         fileName: result.fileName || result.document?.title || payload.title || 'Document',
         status: result.duplicate ? 'duplicate' : 'completed',
         percent: 100,
-        message: result.duplicate ? 'Skipped duplicate' : 'Indexed',
+        message: result.duplicate
+          ? 'Skipped duplicate'
+          : result.replaced
+            ? 'Replaced duplicate'
+            : result.versioned
+              ? 'Created version'
+              : 'Indexed',
         error: null,
         documentId: result.document?.id || null,
         chunkCount: Array.isArray(result.chunks) ? result.chunks.length : 0,
