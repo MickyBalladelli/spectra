@@ -203,12 +203,42 @@ export function DashboardShell({ mode, onToggleMode }) {
               allowScrollButtonsMobile
             >
               <Tab value="overview" label="Overview" />
-              <Tab value="ingest" label="Ingest" />
+              <Tab
+                value="ingest"
+                label="Ingest"
+                sx={{
+                  mx: 0.5,
+                  my: 0.75,
+                  minHeight: 36,
+                  borderRadius: 1,
+                  fontWeight: 800,
+                  color: tab === 'ingest' ? 'primary.contrastText' : 'primary.main',
+                  bgcolor: tab === 'ingest' ? 'primary.main' : 'action.selected',
+                  border: 1,
+                  borderColor: tab === 'ingest' ? 'primary.main' : 'primary.main',
+                  '&.Mui-selected': { color: 'primary.contrastText' }
+                }}
+              />
               <Tab value="documents" label="Documents" />
               {selectedDocumentId && <Tab value="document-detail" label="Detail" />}
               <Tab value="collections" label="Collections" />
               <Tab value="explorer" label="Explorer" />
-              <Tab value="search" label="Search" />
+              <Tab
+                value="search"
+                label="Search"
+                sx={{
+                  mx: 0.5,
+                  my: 0.75,
+                  minHeight: 36,
+                  borderRadius: 1,
+                  fontWeight: 800,
+                  color: tab === 'search' ? 'primary.contrastText' : 'primary.main',
+                  bgcolor: tab === 'search' ? 'primary.main' : 'action.selected',
+                  border: 1,
+                  borderColor: tab === 'search' ? 'primary.main' : 'primary.main',
+                  '&.Mui-selected': { color: 'primary.contrastText' }
+                }}
+              />
               <Tab value="console" label="Console" />
             </Tabs>
           </Box>
