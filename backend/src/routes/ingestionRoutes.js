@@ -2,8 +2,9 @@ import express from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { cancelIngestionJob, createIngestionJob, getIngestionJob, listIngestionJobs, toPublicIngestionJob } from '../db/ingestionJobs.js'
+import { getIngestionWorkerControl, setIngestionWorkerPaused } from '../db/ingestionWorkerControl.js'
 import { getUserIdFromRequest } from '../http/userScope.js'
-import { requireAuth } from '../http/auth.js'
+import { requireAdmin, requireAuth } from '../http/auth.js'
 import { deleteDocument } from '../db/documents.js'
 import { uploadedFilesToPayload } from '../services/uploadParser.js'
 
@@ -148,6 +149,36 @@ ingestionRoutes.post('/jobs/:jobId/cancel', requireAuth, async (request, respons
     }
 
     return response.json({ job: toPublicIngestionJob(job) })
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.get('/worker', requireAuth, requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await getIngestionWorkerControl())
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.post('/worker/pause', requireAuth, requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await setIngestionWorkerPaused({
+      paused: true,
+      updatedBy: getUserIdFromRequest(request)
+    }))
+  } catch (error) {
+    next(error)
+  }
+})
+
+ingestionRoutes.post('/worker/resume', requireAuth, requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await setIngestionWorkerPaused({
+      paused: false,
+      updatedBy: getUserIdFromRequest(request)
+    }))
   } catch (error) {
     next(error)
   }

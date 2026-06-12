@@ -5,6 +5,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
 import { DocumentInputZone } from './DocumentInputZone.jsx'
 import { BatchIngestFileList } from './BatchIngestFileList.jsx'
+import { WorkerControlPanel } from './WorkerControlPanel.jsx'
 
 function getJobDetail(job) {
   if (job.status === 'canceled') return 'Ingestion canceled'
@@ -38,6 +39,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
   const [jobs, setJobs] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeJobId, setActiveJobId] = useState('')
+  const [viewer, setViewer] = useState({ isAdmin: false })
 
   async function refreshJobs() {
     if (!canIngest) return
@@ -77,6 +79,14 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
 
   useEffect(() => {
     refreshJobs().catch(() => {})
+  }, [canIngest])
+
+  useEffect(() => {
+    if (!canIngest) return
+
+    apiGet('/api/auth/me')
+      .then(setViewer)
+      .catch(() => {})
   }, [canIngest])
 
   async function startIngestion() {
@@ -198,6 +208,7 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           value={progress.percent}
           sx={{ height: 8, borderRadius: 1 }}
         />
+        <WorkerControlPanel isAdmin={viewer.isAdmin} />
         <DocumentInputZone
           title={title}
           text={text}

@@ -104,6 +104,13 @@ create index if not exists ingestion_jobs_user_id_idx on ingestion_jobs(user_id)
 create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status);
 create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc);
 
+create table if not exists ingestion_worker_controls (
+  id text primary key,
+  paused boolean not null default false,
+  updated_by text,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists users (
   username text primary key,
   password_hash text not null,

@@ -1,6 +1,7 @@
 import os from 'os'
 import { env } from '../config/env.js'
 import { claimNextIngestionJob } from '../db/ingestionJobs.js'
+import { getIngestionWorkerControl } from '../db/ingestionWorkerControl.js'
 import { runIngestionJob } from './ingestionJobRunner.js'
 import { recordWorkerLog, recordErrorLog } from './observabilityService.js'
 
@@ -34,6 +35,7 @@ async function workOnce(workerId) {
 export function startIngestionWorkerLoop(name = 'worker') {
   const workerId = `${name}:${os.hostname()}:${process.pid}`
   let stopping = false
+  let loggedPaused = false
 
   async function run() {
     console.log(`Spectra ingestion worker ${workerId} started`)
@@ -44,6 +46,27 @@ export function startIngestionWorkerLoop(name = 'worker') {
 
     while (!stopping) {
       try {
+        const control = await getIngestionWorkerControl()
+        if (control.paused) {
+          if (!loggedPaused) {
+            recordWorkerLog({
+              workerId,
+              message: 'Worker paused'
+            })
+            loggedPaused = true
+          }
+          await sleep(env.ingestionWorkerPollMs)
+          continue
+        }
+
+        if (loggedPaused) {
+          recordWorkerLog({
+            workerId,
+            message: 'Worker resumed'
+          })
+          loggedPaused = false
+        }
+
         const worked = await workOnce(workerId)
         if (!worked) {
           await sleep(env.ingestionWorkerPollMs)

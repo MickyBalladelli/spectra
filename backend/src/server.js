@@ -126,6 +126,19 @@ async function ensureDatabaseSchema() {
       await client.query(`create index if not exists ingestion_jobs_status_idx on ingestion_jobs(status)`)
       await client.query(`create index if not exists ingestion_jobs_created_at_idx on ingestion_jobs(created_at desc)`)
       await client.query(`
+        create table if not exists ingestion_worker_controls (
+          id text primary key,
+          paused boolean not null default false,
+          updated_by text,
+          updated_at timestamptz not null default now()
+        )
+      `)
+      await client.query(`
+        insert into ingestion_worker_controls (id, paused)
+        values ('global', false)
+        on conflict (id) do nothing
+      `)
+      await client.query(`
         create table if not exists users (
           username text primary key,
           password_hash text not null,
