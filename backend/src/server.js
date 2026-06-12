@@ -209,9 +209,23 @@ async function ensureDatabaseSchema() {
         create table if not exists collection_shares (
           collection_id uuid not null references collections(id) on delete cascade,
           user_id text not null references users(username) on delete cascade,
+          role text not null default 'viewer' check (role in ('viewer', 'editor')),
           created_at timestamptz not null default now(),
           primary key (collection_id, user_id)
         )
+      `)
+      await client.query(`alter table collection_shares add column if not exists role text not null default 'viewer'`)
+      await client.query(`
+        do $$
+        begin
+          if not exists (
+            select 1 from pg_constraint
+            where conname = 'collection_shares_role_check'
+          ) then
+            alter table collection_shares
+              add constraint collection_shares_role_check check (role in ('viewer', 'editor'));
+          end if;
+        end $$;
       `)
       await client.query(`create index if not exists collections_owner_user_id_idx on collections(owner_user_id)`)
       await client.query(`create index if not exists collection_documents_document_id_idx on collection_documents(document_id)`)

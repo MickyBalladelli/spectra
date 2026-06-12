@@ -20,7 +20,8 @@ const documentSchema = z.object({
 })
 
 const shareSchema = z.object({
-  username: z.string().trim().min(1)
+  username: z.string().trim().min(1),
+  role: z.enum(['viewer', 'editor']).default('viewer')
 })
 
 export const collectionRoutes = express.Router()
@@ -95,7 +96,8 @@ collectionRoutes.post('/:collectionId/shares', async (request, response, next) =
     const shared = await shareCollection({
       userId: getUserIdFromRequest(request),
       collectionId: request.params.collectionId,
-      targetUserId: payload.username
+      targetUserId: payload.username,
+      role: payload.role
     })
 
     if (!shared) return response.status(404).json({ error: 'Collection or user not found' })

@@ -11,6 +11,7 @@ export function CollectionsView({ documents, collections, onChanged }) {
   const [collectionDocuments, setCollectionDocuments] = useState([])
   const [documentId, setDocumentId] = useState('')
   const [shareUser, setShareUser] = useState('')
+  const [shareRole, setShareRole] = useState('viewer')
   const selected = useMemo(
     () => collections.find(collection => collection.id === selectedId) || null,
     [collections, selectedId]
@@ -19,6 +20,7 @@ export function CollectionsView({ documents, collections, onChanged }) {
     const inCollection = new Set(collectionDocuments.map(document => document.id))
     return documents.filter(document => !inCollection.has(document.id))
   }, [documents, collectionDocuments])
+  const canEditSelected = selected?.isOwner || selected?.userRole === 'editor'
 
   useEffect(() => {
     if (!selectedId && collections.length > 0) {
@@ -61,8 +63,9 @@ export function CollectionsView({ documents, collections, onChanged }) {
 
   async function share() {
     if (!selectedId || !shareUser.trim()) return
-    await apiPost(`/api/collections/${selectedId}/shares`, { username: shareUser.trim() })
+    await apiPost(`/api/collections/${selectedId}/shares`, { username: shareUser.trim(), role: shareRole })
     setShareUser('')
+    setShareRole('viewer')
     await onChanged?.()
   }
 
@@ -104,12 +107,18 @@ export function CollectionsView({ documents, collections, onChanged }) {
             {selected && (
               <Stack spacing={2}>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={selected.isOwner ? 'Owner' : `Shared by ${selected.ownerUserId}`} color={selected.isOwner ? 'primary' : 'default'} variant="outlined" />
+                  <Chip
+                    label={selected.isOwner ? 'Owner' : `${selected.userRole || 'viewer'} from ${selected.ownerUserId}`}
+                    color={selected.isOwner ? 'primary' : selected.userRole === 'editor' ? 'success' : 'default'}
+                    variant="outlined"
+                  />
                   <Chip label={`${collectionDocuments.length} documents`} />
-                  {(selected.shares || []).map(user => <Chip key={user} label={`shared: ${user}`} variant="outlined" />)}
+                  {(selected.shares || []).map(share => (
+                    <Chip key={share.userId} label={`${share.userId}: ${share.role}`} variant="outlined" />
+                  ))}
                 </Stack>
 
-                {selected.isOwner && (
+                {canEditSelected && (
                   <>
                     <Divider />
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -122,8 +131,19 @@ export function CollectionsView({ documents, collections, onChanged }) {
                         </Select>
                       </FormControl>
                       <Button variant="outlined" onClick={addDocument} disabled={!documentId}>Add</Button>
-                      <TextField size="small" label="Share with user" value={shareUser} onChange={event => setShareUser(event.target.value)} />
-                      <Button startIcon={<ShareIcon />} variant="outlined" onClick={share} disabled={!shareUser.trim()}>Share</Button>
+                      {selected.isOwner && (
+                        <>
+                          <TextField size="small" label="Share with user" value={shareUser} onChange={event => setShareUser(event.target.value)} />
+                          <FormControl size="small" sx={{ width: { xs: '100%', md: 140 } }}>
+                            <InputLabel>Role</InputLabel>
+                            <Select label="Role" value={shareRole} onChange={event => setShareRole(event.target.value)}>
+                              <MenuItem value="viewer">Viewer</MenuItem>
+                              <MenuItem value="editor">Editor</MenuItem>
+                            </Select>
+                          </FormControl>
+                          <Button startIcon={<ShareIcon />} variant="outlined" onClick={share} disabled={!shareUser.trim()}>Share</Button>
+                        </>
+                      )}
                     </Stack>
                   </>
                 )}
@@ -132,9 +152,9 @@ export function CollectionsView({ documents, collections, onChanged }) {
                   {collectionDocuments.length === 0 ? (
                     <Box sx={{ p: 2, color: 'text.secondary' }}>No documents in this collection</Box>
                   ) : collectionDocuments.map((document, index) => (
-                    <Box key={document.id} sx={{ display: 'grid', gridTemplateColumns: selected.isOwner ? '1fr auto' : '1fr', gap: 2, p: 1.25, borderTop: index === 0 ? 0 : 1, borderColor: 'divider' }}>
+                    <Box key={document.id} sx={{ display: 'grid', gridTemplateColumns: canEditSelected ? '1fr auto' : '1fr', gap: 2, p: 1.25, borderTop: index === 0 ? 0 : 1, borderColor: 'divider' }}>
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>{document.title}</Typography>
-                      {selected.isOwner && <Button size="small" color="error" onClick={() => removeDocument(document.id)}>Remove</Button>}
+                      {canEditSelected && <Button size="small" color="error" onClick={() => removeDocument(document.id)}>Remove</Button>}
                     </Box>
                   ))}
                 </Stack>

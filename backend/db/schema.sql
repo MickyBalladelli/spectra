@@ -157,6 +157,7 @@ create table if not exists collection_documents (
 create table if not exists collection_shares (
   collection_id uuid not null references collections(id) on delete cascade,
   user_id text not null references users(username) on delete cascade,
+  role text not null default 'viewer' check (role in ('viewer', 'editor')),
   created_at timestamptz not null default now(),
   primary key (collection_id, user_id)
 );

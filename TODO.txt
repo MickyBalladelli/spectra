@@ -1,7 +1,5 @@
 
 
-Add collection permissions roles: viewer/editor
-Add background cleanup for uploaded temp files
 Add DB migrations instead of auto schema edits
 Add tests for ownership and ingestion failures
 Add code splitting to reduce frontend bundle size
