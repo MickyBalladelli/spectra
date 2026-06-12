@@ -1,5 +1,24 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box, Button, Chip, FormControl, InputLabel, LinearProgress, MenuItem, Paper, Select, Stack, Typography } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  FormControl,
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography
+} from '@mui/material'
 import CancelIcon from '@mui/icons-material/Cancel'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { apiGet, apiPost, apiUploadFiles } from '../api/client.js'
@@ -251,55 +270,62 @@ export function IngestionPanel({ socket, canIngest, onCompleted }) {
           onRetry={retryFailedFile}
         />
         {jobs.length > 0 && (
-          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-            {jobs.slice(0, 5).map((job, index) => (
-              <Box
-                key={job.id}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 150px 72px 108px' },
-                  gap: 1,
-                  alignItems: 'center',
-                  p: 1.25,
-                  borderTop: index === 0 ? 0 : 1,
-                  borderColor: 'divider'
-                }}
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {job.title}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color={job.status === 'failed' ? 'error.main' : 'text.secondary'}
-                    sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  >
-                    {getJobDetail(job)}
-                  </Typography>
-                </Box>
-                <Chip
-                  size="small"
-                  label={job.queuePosition ? `${job.status} #${job.queuePosition}` : job.status}
-                  color={getJobColor(job)}
-                  sx={{ justifySelf: { md: 'start' }, width: { md: 138 } }}
-                />
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: { md: 'right' }, fontVariantNumeric: 'tabular-nums' }}>
-                  {job.percent || 0}%
-                </Typography>
-                <Button
-                  size="small"
-                  color="warning"
-                  variant="outlined"
-                  startIcon={<CancelIcon />}
-                  onClick={() => cancelJob(job.id)}
-                  disabled={!canCancelJob(job)}
-                  sx={{ justifySelf: { md: 'end' }, width: { md: 100 } }}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            ))}
-          </Paper>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Job</TableCell>
+                  <TableCell sx={{ width: 160 }}>Status</TableCell>
+                  <TableCell align="right" sx={{ width: 90 }}>Progress</TableCell>
+                  <TableCell align="right" sx={{ width: 120 }}>Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {jobs.slice(0, 5).map(job => (
+                  <TableRow key={job.id}>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {job.title}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color={job.status === 'failed' ? 'error.main' : 'text.secondary'}
+                        sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      >
+                        {getJobDetail(job)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={job.queuePosition ? `${job.status} #${job.queuePosition}` : job.status}
+                        color={getJobColor(job)}
+                        sx={{ width: 138 }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {job.percent || 0}%
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        startIcon={<CancelIcon />}
+                        onClick={() => cancelJob(job.id)}
+                        disabled={!canCancelJob(job)}
+                        sx={{ width: 100 }}
+                      >
+                        Cancel
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </Stack>
     </Paper>
