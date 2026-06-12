@@ -48,6 +48,8 @@ It gives users one place to ingest documents, track indexing progress, inspect s
 
 - `DATABASE_URL`: main app database for users, documents, chunks, vectors, jobs, collections, and search audit.
 - `LOG_DATABASE_URL`: optional observability database for request, job, worker, and error logs. Defaults to `DATABASE_URL` when empty.
+- `UPLOAD_CLEANUP_MAX_AGE_HOURS`: uploaded temp folder age before cleanup.
+- `UPLOAD_CLEANUP_INTERVAL_MS`: background cleanup interval.
 
 ## Maintenance
 

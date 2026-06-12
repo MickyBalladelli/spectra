@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url)
 const pdfjsRoot = dirname(require.resolve('pdfjs-dist/package.json'))
 const standardFontDataUrl = `${join(pdfjsRoot, 'standard_fonts')}/`
 const cMapUrl = `${join(pdfjsRoot, 'cmaps')}/`
-const uploadRoot = join(process.cwd(), 'data', 'uploads')
+export const uploadRoot = join(process.cwd(), 'data', 'uploads')
 const ocrTextThreshold = 20
 
 function badRequest(message) {

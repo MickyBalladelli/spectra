@@ -6,10 +6,12 @@ import { logPool, pool, withClient, withLogClient } from './db/pool.js'
 import { registerSockets } from './socket/index.js'
 import { startIngestionJobEvents } from './services/ingestionJobEvents.js'
 import { startIngestionWorkerLoop } from './services/ingestionWorkerLoop.js'
+import { startUploadCleanupLoop } from './services/uploadCleanupService.js'
 
 let io
 let stopIngestionJobEvents = async () => {}
 let stopIngestionWorker = () => {}
+let stopUploadCleanup = () => {}
 const app = createApp(() => io)
 const server = http.createServer(app)
 io = new Server(server, {
@@ -227,6 +229,7 @@ async function startServer() {
   await ensureDatabaseSchema()
   stopIngestionJobEvents = await startIngestionJobEvents(io)
   stopIngestionWorker = startIngestionWorkerLoop('server')
+  stopUploadCleanup = startUploadCleanupLoop()
 
   server.listen(env.port, () => {
     console.log(`Spectra backend listening on ${env.port}`)
@@ -241,6 +244,7 @@ startServer().catch(error => {
 async function shutdown(signal) {
   console.log(`${signal} received, closing Spectra backend`)
   stopIngestionWorker()
+  stopUploadCleanup()
   await stopIngestionJobEvents()
   io.close()
   server.close(async () => {
