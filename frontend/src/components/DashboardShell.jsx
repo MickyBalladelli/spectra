@@ -129,11 +129,13 @@ export function DashboardShell({ mode, onToggleMode }) {
         sx={{
           borderBottom: 1,
           borderColor: 'divider',
-          gap: 2,
+          gap: 1.5,
           bgcolor: 'background.paper',
           position: 'sticky',
           top: 0,
-          zIndex: theme => theme.zIndex.appBar
+          zIndex: theme => theme.zIndex.appBar,
+          flexWrap: 'wrap',
+          py: 1
         }}
       >
         <Box
@@ -142,9 +144,20 @@ export function DashboardShell({ mode, onToggleMode }) {
           alt="Spectra"
           sx={{ width: 34, height: 34, borderRadius: 1 }}
         />
-        <Typography variant="h6" sx={{ flex: 1 }}>
-          Spectra
-        </Typography>
+        <Box sx={{ flex: '1 1 280px', minWidth: 220 }}>
+          <Typography variant="h6" sx={{ lineHeight: 1.1 }}>
+            Vector control room
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            pgvector index, metadata, sockets
+          </Typography>
+        </Box>
+        <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">
+          Ingest
+        </Button>
+        <Button startIcon={<SearchIcon />} variant="outlined" onClick={() => setTab('search')} aria-label="Open search panel">
+          Query
+        </Button>
         <Chip
           size="small"
           label={status}
@@ -180,21 +193,6 @@ export function DashboardShell({ mode, onToggleMode }) {
 
       <Container component="main" id="main-content" maxWidth="xl" sx={{ py: 3 }}>
         <Stack spacing={3}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4" sx={{ fontSize: { xs: 28, md: 34 } }}>Vector control room</Typography>
-              <Typography color="text.secondary">
-                pgvector index, metadata, sockets
-              </Typography>
-            </Box>
-            <Button startIcon={<UploadFileIcon />} variant="contained" onClick={() => setTab('ingest')} aria-label="Open ingestion panel">
-              Ingest
-            </Button>
-            <Button startIcon={<SearchIcon />} variant="outlined" onClick={() => setTab('search')} aria-label="Open search panel">
-              Query
-            </Button>
-          </Stack>
-
           <Box
             sx={{
               bgcolor: 'background.paper',
