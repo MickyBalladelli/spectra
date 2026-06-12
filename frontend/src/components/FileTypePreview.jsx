@@ -37,6 +37,12 @@ function getIcon(kind) {
   return <ArticleIcon fontSize="small" />
 }
 
+function getCapabilityLabel(kind, supported) {
+  if (!supported) return 'unsupported'
+  if (kind === 'PDF') return 'text + OCR'
+  return 'supported'
+}
+
 export function FileTypePreview({ files }) {
   if (!files?.length) return null
 
@@ -79,7 +85,7 @@ export function FileTypePreview({ files }) {
             </Stack>
             <Chip size="small" label={kind} variant="outlined" />
             <Stack direction="row" spacing={0.5}>
-              <Chip size="small" label={supported ? 'supported' : 'unsupported'} color={supported ? 'success' : 'error'} />
+              <Chip size="small" label={getCapabilityLabel(kind, supported)} color={supported ? 'success' : 'error'} />
               {duplicateName && <Chip size="small" label="same name" color="warning" />}
             </Stack>
           </Box>

@@ -1,7 +1,9 @@
 import { createRequire } from 'module'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
+import { createCanvas } from '@napi-rs/canvas'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { createWorker } from 'tesseract.js'
 
 const textExtensions = new Set(['.txt', '.md', '.markdown', '.json', '.csv'])
 const require = createRequire(import.meta.url)
@@ -9,6 +11,7 @@ const pdfjsRoot = dirname(require.resolve('pdfjs-dist/package.json'))
 const standardFontDataUrl = `${join(pdfjsRoot, 'standard_fonts')}/`
 const cMapUrl = `${join(pdfjsRoot, 'cmaps')}/`
 const uploadRoot = join(process.cwd(), 'data', 'uploads')
+const ocrTextThreshold = 20
 
 function badRequest(message) {
   const error = new Error(message)
@@ -122,6 +125,22 @@ export function parseMultipartBody(request) {
   return { fields, files }
 }
 
+async function ocrPdfPage(page, worker) {
+  const viewport = page.getViewport({ scale: 2 })
+  const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
+  const context = canvas.getContext('2d')
+
+  await page.render({
+    canvasContext: context,
+    viewport
+  }).promise
+
+  const image = await canvas.encode('png')
+  const result = await worker.recognize(image)
+
+  return result.data.text || ''
+}
+
 async function readPdf(buffer) {
   const pdf = await getDocument({
     data: new Uint8Array(buffer),
@@ -132,9 +151,11 @@ async function readPdf(buffer) {
     standardFontDataUrl
   }).promise
   const pages = []
+  const pageRefs = []
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber)
+    pageRefs.push(page)
     const content = await page.getTextContent()
     const text = content.items
       .map(item => item.str)
@@ -144,7 +165,31 @@ async function readPdf(buffer) {
     pages.push(text)
   }
 
-  return pages.join('\n\n')
+  const extractedText = pages.join('\n\n')
+  if (extractedText.trim().length >= ocrTextThreshold) {
+    return {
+      text: extractedText,
+      ocrUsed: false,
+      pageCount: pdf.numPages
+    }
+  }
+
+  const ocrPages = []
+  const worker = await createWorker('eng')
+
+  try {
+    for (const page of pageRefs) {
+      ocrPages.push(await ocrPdfPage(page, worker))
+    }
+  } finally {
+    await worker.terminate()
+  }
+
+  return {
+    text: ocrPages.join('\n\n'),
+    ocrUsed: true,
+    pageCount: pdf.numPages
+  }
 }
 
 async function fileToDocument(file) {
@@ -156,7 +201,8 @@ async function fileToDocument(file) {
   }
 
   const buffer = file.buffer || await readFile(file.path)
-  const text = isPdf ? await readPdf(buffer) : buffer.toString('utf8')
+  const pdfResult = isPdf ? await readPdf(buffer) : null
+  const text = isPdf ? pdfResult.text : buffer.toString('utf8')
   if (!text.trim()) {
     throw badRequest(`No text found in ${file.originalName}`)
   }
@@ -168,7 +214,11 @@ async function fileToDocument(file) {
     metadata: {
       sourceFileName: file.originalName,
       mimeType: file.mimeType,
-      byteSize: file.byteSize || buffer.length
+      byteSize: file.byteSize || buffer.length,
+      ...(isPdf ? {
+        pageCount: pdfResult.pageCount,
+        ocrUsed: pdfResult.ocrUsed
+      } : {})
     }
   }
 }
